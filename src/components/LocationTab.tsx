@@ -16,7 +16,7 @@ const LocationTab: React.FC<LocationTabProps> = ({ data, locationName }) => {
         <p className="text-gray-600">Client Conversion and Retention Metrics</p>
       </div>
       
-      <MetricsTable data={data} />
+      <MetricsTable data={data} locationName={locationName} />
     </div>
   );
 };

@@ -41,3 +41,20 @@ export const formatNumber = (value: number | string): string => {
     return `${sign}${Math.round(absValue).toLocaleString('en-IN')}`;
   }
 };
+
+export const formatValue = (value: string): string => {
+  if (!value || value === '0' || value === '') return '0';
+  
+  // Check if it's a currency value
+  if (value.includes('₹')) {
+    return formatCurrency(value);
+  }
+  
+  // Check if it's a percentage
+  if (value.includes('%')) {
+    return formatPercentage(value);
+  }
+  
+  // Default to number formatting
+  return formatNumber(value);
+};
