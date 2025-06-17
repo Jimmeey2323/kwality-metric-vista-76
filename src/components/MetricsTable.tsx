@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { MetricData, getUniqueMetrics } from '@/utils/csvParser';
 import { formatValue } from '@/utils/formatters';
 import { TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
@@ -18,7 +19,14 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, locationName }) => {
   const [isNoteTakerOpen, setIsNoteTakerOpen] = useState(false);
   const [notes, setNotes] = useState('');
 
-  const uniqueMetrics = useMemo(() => getUniqueMetrics(data), [data]);
+  // Filter for only specified locations
+  const allowedLocations = ['Kwality House, Kemps Corner', 'Supreme HQ, Bandra', 'Kenkere House'];
+  
+  const filteredDataByLocation = useMemo(() => {
+    return data.filter(item => allowedLocations.includes(item.firstVisitLocation));
+  }, [data]);
+
+  const uniqueMetrics = useMemo(() => getUniqueMetrics(filteredDataByLocation), [filteredDataByLocation]);
 
   React.useEffect(() => {
     if (uniqueMetrics.length > 0 && !selectedMetric) {
@@ -26,9 +34,9 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, locationName }) => {
     }
   }, [uniqueMetrics, selectedMetric]);
 
-  const filteredData = useMemo(() => {
-    return data.filter(item => item.metric === selectedMetric);
-  }, [data, selectedMetric]);
+  const metricData = useMemo(() => {
+    return filteredDataByLocation.filter(item => item.metric === selectedMetric);
+  }, [filteredDataByLocation, selectedMetric]);
 
   const monthColumns = [
     { key: '2025-jun', label: 'Jun 2025' },
@@ -78,7 +86,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, locationName }) => {
   };
 
   const calculateColumnTotal = (columnKey: keyof MetricData) => {
-    const total = filteredData.reduce((sum, row) => {
+    const total = metricData.reduce((sum, row) => {
       const value = row[columnKey];
       const numValue = typeof value === 'string' ? parseFloat(value) || 0 : 0;
       return sum + numValue;
@@ -91,13 +99,13 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, locationName }) => {
     return typeof value === 'string' ? value : (value || '0');
   };
 
-  if (!selectedMetric || filteredData.length === 0) {
+  if (!selectedMetric || metricData.length === 0) {
     return (
       <Card className="p-8 text-center bg-gradient-to-br from-white via-slate-50 to-blue-50 border border-slate-200/50 shadow-xl rounded-2xl">
         <div className="text-slate-600">
           <div className="text-4xl mb-4">📊</div>
           <h3 className="text-xl font-bold mb-2">No Data Available</h3>
-          <p>No metrics data found for {locationName}</p>
+          <p>No metrics data found for the selected locations</p>
         </div>
       </Card>
     );
@@ -105,130 +113,162 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, locationName }) => {
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Metric Selector */}
+      {/* Enhanced Metric Selector with Horizontal Scroll */}
       <Card className="p-6 bg-gradient-to-br from-white via-slate-50 to-blue-50 border border-slate-200/50 shadow-xl rounded-2xl">
         <div className="mb-6">
           <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-            Performance Metrics - {locationName}
+            Performance Metrics - {selectedMetric}
           </h3>
-          <p className="text-slate-600 text-sm mt-1">Select a metric to analyze performance trends</p>
+          <p className="text-slate-600 text-sm mt-1">Select a metric to analyze performance trends across locations</p>
         </div>
         
-        <Tabs value={selectedMetric} onValueChange={setSelectedMetric}>
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 bg-transparent p-2 h-auto">
+        <ScrollArea className="w-full whitespace-nowrap rounded-lg">
+          <div className="flex w-max space-x-4 p-4">
             {uniqueMetrics.map((metric) => (
-              <TabsTrigger 
-                key={metric} 
-                value={metric}
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-xl data-[state=active]:scale-105 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 rounded-xl p-4 text-center border border-slate-200/50 bg-white/80 backdrop-blur-sm hover:shadow-lg"
+              <button
+                key={metric}
+                onClick={() => setSelectedMetric(metric)}
+                className={`flex-shrink-0 px-6 py-4 rounded-xl border transition-all duration-300 min-w-[200px] ${
+                  selectedMetric === metric
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl scale-105 border-transparent'
+                    : 'bg-white/80 backdrop-blur-sm border-slate-200/50 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:scale-102'
+                }`}
               >
                 <div className="flex flex-col items-center space-y-2">
-                  <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 data-[state=active]:from-white data-[state=active]:to-white"></div>
-                  <span className="font-semibold text-sm leading-tight">{metric}</span>
-                  <div className="text-xs opacity-75">
-                    {filteredData.length} records
+                  <div className={`w-3 h-3 rounded-full ${
+                    selectedMetric === metric 
+                      ? 'bg-white' 
+                      : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                  }`}></div>
+                  <span className="font-semibold text-sm leading-tight text-center">{metric}</span>
+                  <div className={`text-xs ${selectedMetric === metric ? 'text-white/80' : 'opacity-75'}`}>
+                    {metricData.length} records
                   </div>
                 </div>
-              </TabsTrigger>
+              </button>
             ))}
-          </TabsList>
-        </Tabs>
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </Card>
 
-      {/* Main Data Table */}
-      <Card className="overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 border border-slate-200/50 shadow-2xl rounded-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
-              {/* Year Headers */}
-              <tr>
-                <th rowSpan={2} className="px-6 py-4 text-left font-bold border-r border-slate-600 min-w-[200px]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    Trainer Details
-                  </div>
-                </th>
-                <th colSpan={6} className="px-4 py-2 text-center font-bold border-r border-slate-600 text-lg">
-                  2025
-                </th>
-                <th colSpan={12} className="px-4 py-2 text-center font-bold border-r border-slate-600 text-lg">
-                  2024
-                </th>
-                <th rowSpan={2} className="px-4 py-4 text-center font-bold min-w-[120px]">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                    Total
-                  </div>
-                </th>
-              </tr>
-              {/* Month Headers */}
-              <tr>
-                {monthColumns.map((column) => (
-                  <th key={column.key} className="px-3 py-2 text-center text-xs font-semibold border-r border-slate-600 min-w-[80px] text-slate-200">
-                    {column.label.split(' ')[0]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((row, index) => (
-                <tr key={index} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-b border-slate-200/50 transition-all duration-300 group">
-                  <td className="px-6 py-4 border-r border-slate-200/50 bg-white group-hover:bg-gradient-to-r group-hover:from-blue-50 group-hover:to-purple-50">
-                    <div className="space-y-2">
-                      <div className="font-bold text-slate-900">{row.trainerName}</div>
-                      <div className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-full inline-block font-medium">
-                        {row.isNew}
-                      </div>
-                    </div>
-                  </td>
-                  {monthColumns.map((column, colIndex) => {
-                    const currentValue = getValueForColumn(row, column.key as keyof MetricData);
-                    const previousValue = colIndex < monthColumns.length - 1 
-                      ? getValueForColumn(row, monthColumns[colIndex + 1].key as keyof MetricData)
-                      : null;
+      {/* Location-based Tables for Selected Metric */}
+      <div className="space-y-6">
+        {allowedLocations.map(location => {
+          const locationData = metricData.filter(item => item.firstVisitLocation === location);
+          
+          if (locationData.length === 0) return null;
+          
+          return (
+            <Card key={location} className="overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 border border-slate-200/50 shadow-2xl rounded-2xl">
+              <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-4">
+                <h3 className="text-lg font-bold flex items-center gap-3">
+                  <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+                  {location} - {selectedMetric}
+                </h3>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 text-white sticky top-0 z-10">
+                    <tr>
+                      <th rowSpan={2} className="px-6 py-4 text-left font-bold border-r border-slate-600 min-w-[250px]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                          Trainer Details
+                        </div>
+                      </th>
+                      <th colSpan={6} className="px-4 py-2 text-center font-bold border-r border-slate-600 text-lg">
+                        2025
+                      </th>
+                      <th colSpan={12} className="px-4 py-2 text-center font-bold border-r border-slate-600 text-lg">
+                        2024
+                      </th>
+                      <th rowSpan={2} className="px-4 py-4 text-center font-bold min-w-[120px]">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                          Total
+                        </div>
+                      </th>
+                    </tr>
+                    <tr>
+                      {monthColumns.map((column) => (
+                        <th key={column.key} className="px-3 py-2 text-center text-xs font-semibold border-r border-slate-600 min-w-[80px] text-slate-200">
+                          {column.label.split(' ')[0]}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {locationData.map((row, index) => (
+                      <tr key={index} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-b border-slate-200/50 transition-all duration-300 group">
+                        <td className="px-6 py-4 border-r border-slate-200/50 bg-white group-hover:bg-gradient-to-r group-hover:from-blue-50 group-hover:to-purple-50">
+                          <div className="space-y-2">
+                            <div className="font-bold text-slate-900">{row.trainerName}</div>
+                            <div className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-full inline-block font-medium">
+                              {row.isNew}
+                            </div>
+                          </div>
+                        </td>
+                        {monthColumns.map((column, colIndex) => {
+                          const currentValue = getValueForColumn(row, column.key as keyof MetricData);
+                          const previousValue = colIndex < monthColumns.length - 1 
+                            ? getValueForColumn(row, monthColumns[colIndex + 1].key as keyof MetricData)
+                            : null;
+                          
+                          return (
+                            <td key={column.key} className="px-3 py-4 text-center border-r border-slate-200/50 group-hover:bg-gradient-to-r group-hover:from-blue-50/50 group-hover:to-purple-50/50">
+                              <div className="flex flex-col items-center gap-2">
+                                <span className="font-bold text-slate-900">
+                                  {formatValue(currentValue)}
+                                </span>
+                                {previousValue && getGrowthIndicator(currentValue, previousValue)}
+                              </div>
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-4 text-center font-bold text-emerald-700 bg-emerald-50">
+                          {formatValue(row.grandTotal)}
+                        </td>
+                      </tr>
+                    ))}
                     
-                    return (
-                      <td key={column.key} className="px-3 py-4 text-center border-r border-slate-200/50 group-hover:bg-gradient-to-r group-hover:from-blue-50/50 group-hover:to-purple-50/50">
-                        <div className="flex flex-col items-center gap-2">
-                          <span className="font-bold text-slate-900">
-                            {formatValue(currentValue)}
-                          </span>
-                          {previousValue && getGrowthIndicator(currentValue, previousValue)}
+                    {/* Totals Row for this location */}
+                    <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-bold border-t-4 border-emerald-500">
+                      <td className="px-6 py-4 border-r border-emerald-400 text-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                          LOCATION TOTAL
                         </div>
                       </td>
-                    );
-                  })}
-                  <td className="px-4 py-4 text-center font-bold text-emerald-700 bg-emerald-50">
-                    {formatValue(row.grandTotal)}
-                  </td>
-                </tr>
-              ))}
-              
-              {/* Totals Row */}
-              <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-bold border-t-4 border-emerald-500">
-                <td className="px-6 py-4 border-r border-emerald-400 text-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-                    TOTALS
-                  </div>
-                </td>
-                {monthColumns.map((column) => (
-                  <td key={column.key} className="px-3 py-4 text-center border-r border-emerald-400">
-                    <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                      {formatValue(calculateColumnTotal(column.key as keyof MetricData))}
-                    </div>
-                  </td>
-                ))}
-                <td className="px-4 py-4 text-center text-lg">
-                  <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                    {formatValue(calculateColumnTotal('grandTotal'))}
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                      {monthColumns.map((column) => {
+                        const locationTotal = locationData.reduce((sum, row) => {
+                          const value = row[column.key as keyof MetricData];
+                          const numValue = typeof value === 'string' ? parseFloat(value) || 0 : 0;
+                          return sum + numValue;
+                        }, 0);
+                        
+                        return (
+                          <td key={column.key} className="px-3 py-4 text-center border-r border-emerald-400">
+                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                              {formatValue(locationTotal.toString())}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td className="px-4 py-4 text-center text-lg">
+                        <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                          {formatValue(locationData.reduce((sum, row) => sum + (parseFloat(row.grandTotal) || 0), 0).toString())}
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Collapsible Note Taker */}
       <Card className="bg-gradient-to-br from-white via-slate-50 to-blue-50 border border-slate-200/50 shadow-xl rounded-2xl">
@@ -249,7 +289,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, locationName }) => {
         {isNoteTakerOpen && (
           <div className="p-6 border-t border-slate-200/50 bg-white/80 rounded-b-2xl">
             <Textarea
-              placeholder={`Add your analysis notes for ${selectedMetric} metrics at ${locationName}...`}
+              placeholder={`Add your analysis notes for ${selectedMetric} metrics across locations...`}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="min-h-[120px] border-slate-200 focus:border-blue-400 focus:ring-blue-400 bg-white/90"
