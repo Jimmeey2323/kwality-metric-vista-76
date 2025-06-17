@@ -1,15 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { parseCSV, groupDataByLocation, MetricData } from '@/utils/csvParser';
 import LocationTab from '@/components/LocationTab';
+import FloatingNoteTaker from '@/components/FloatingNoteTaker';
 import { Loader2, Building2, TrendingUp, BarChart3 } from 'lucide-react';
 
 const Index = () => {
   const [data, setData] = useState<{ [key: string]: MetricData[] }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFloatingNotePinned, setIsFloatingNotePinned] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -126,7 +127,23 @@ const Index = () => {
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* Pinned Note Taker */}
+        <FloatingNoteTaker
+          storageKey="dashboard-notes-pinned"
+          title="Dashboard Notes"
+          isPinned={isFloatingNotePinned}
+          onPinToggle={setIsFloatingNotePinned}
+          className="mt-8"
+        />
       </div>
+
+      {/* Floating Note Taker */}
+      <FloatingNoteTaker
+        storageKey="dashboard-notes-floating"
+        title="Quick Notes"
+        isPinned={false}
+      />
 
       {/* Footer */}
       <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 backdrop-blur-md border-t border-slate-600 mt-20">
