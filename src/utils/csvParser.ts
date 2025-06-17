@@ -2,11 +2,11 @@
 import Papa from 'papaparse';
 
 export interface MetricData {
-  metric: string;           // Column 0: Metric type (e.g., "Gross Sales", "Net Sales")
-  location: string;         // Column 1: Calculated Location
-  category: string;         // Column 2: Cleaned Category  
-  product: string;          // Column 3: Cleaned Product
-  // 23 months from 2025-May to 2023-Jul (columns 4-26)
+  firstVisitLocation: string;    // Column 0: First Visit Location
+  trainerName: string;          // Column 1: Trainer Name
+  isNew: string;               // Column 2: Is New
+  // 18 months from 2025-Jun to 2024-Jan (columns 3-20)
+  '2025-jun': string;
   '2025-may': string;
   '2025-apr': string;
   '2025-mar': string;
@@ -24,14 +24,8 @@ export interface MetricData {
   '2024-mar': string;
   '2024-feb': string;
   '2024-jan': string;
-  '2023-dec': string;
-  '2023-nov': string;
-  '2023-oct': string;
-  '2023-sep': string;
-  '2023-aug': string;
-  '2023-jul': string;
-  total: string;            // Column 27: Grand Total
-  no: string;              // Column 29: Row number
+  grandTotal: string;          // Column 21: Grand Total
+  metric: string;              // Column 22: Metric
 }
 
 export const parseCSV = (csvText: string): Promise<MetricData[]> => {
@@ -44,10 +38,10 @@ export const parseCSV = (csvText: string): Promise<MetricData[]> => {
           const data = result.data as string[][];
           // Skip header row
           const parsedData: MetricData[] = data.slice(1).map(row => ({
-            metric: row[0]?.trim() || '',
-            location: row[1]?.trim() || '',
-            category: row[2]?.trim() || '',
-            product: row[3]?.trim() || '',
+            firstVisitLocation: row[0]?.trim() || '',
+            trainerName: row[1]?.trim() || '',
+            isNew: row[2]?.trim() || '',
+            '2025-jun': row[3]?.trim() || '',
             '2025-may': row[4]?.trim() || '',
             '2025-apr': row[5]?.trim() || '',
             '2025-mar': row[6]?.trim() || '',
@@ -65,14 +59,8 @@ export const parseCSV = (csvText: string): Promise<MetricData[]> => {
             '2024-mar': row[18]?.trim() || '',
             '2024-feb': row[19]?.trim() || '',
             '2024-jan': row[20]?.trim() || '',
-            '2023-dec': row[21]?.trim() || '',
-            '2023-nov': row[22]?.trim() || '',
-            '2023-oct': row[23]?.trim() || '',
-            '2023-sep': row[24]?.trim() || '',
-            '2023-aug': row[25]?.trim() || '',
-            '2023-jul': row[26]?.trim() || '',
-            total: row[27]?.trim() || '',
-            no: row[29]?.trim() || ''
+            grandTotal: row[21]?.trim() || '',
+            metric: row[22]?.trim() || ''
           }));
           
           resolve(parsedData);
@@ -96,10 +84,10 @@ export const parseCSVSync = (csvText: string): MetricData[] => {
     const values = line.split(',').map(val => val.trim().replace(/^"|"$/g, ''));
     
     return {
-      metric: values[0] || '',
-      location: values[1] || '',
-      category: values[2] || '',
-      product: values[3] || '',
+      firstVisitLocation: values[0] || '',
+      trainerName: values[1] || '',
+      isNew: values[2] || '',
+      '2025-jun': values[3] || '',
       '2025-may': values[4] || '',
       '2025-apr': values[5] || '',
       '2025-mar': values[6] || '',
@@ -117,14 +105,8 @@ export const parseCSVSync = (csvText: string): MetricData[] => {
       '2024-mar': values[18] || '',
       '2024-feb': values[19] || '',
       '2024-jan': values[20] || '',
-      '2023-dec': values[21] || '',
-      '2023-nov': values[22] || '',
-      '2023-oct': values[23] || '',
-      '2023-sep': values[24] || '',
-      '2023-aug': values[25] || '',
-      '2023-jul': values[26] || '',
-      total: values[27] || '',
-      no: values[29] || ''
+      grandTotal: values[21] || '',
+      metric: values[22] || ''
     };
   });
 };
@@ -133,10 +115,10 @@ export const groupDataByLocation = (data: MetricData[]) => {
   const grouped: { [key: string]: MetricData[] } = {};
   
   data.forEach(item => {
-    if (!grouped[item.location]) {
-      grouped[item.location] = [];
+    if (!grouped[item.firstVisitLocation]) {
+      grouped[item.firstVisitLocation] = [];
     }
-    grouped[item.location].push(item);
+    grouped[item.firstVisitLocation].push(item);
   });
   
   return grouped;

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
@@ -10,7 +11,7 @@ const Index = () => {
   const [data, setData] = useState<{ [key: string]: MetricData[] }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFloatingNotePinned, setIsFloatingNotePinned] = useState(true);
+  const [isFloatingNotePinned, setIsFloatingNotePinned] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -68,11 +69,6 @@ const Index = () => {
   }
 
   const locations = Object.keys(data);
-  const locationDisplayNames = {
-    'Kwality House Kemps Corner': 'Kwality House, Kemps Corner',
-    'Supreme HQ Bandra': 'Supreme HQ, Bandra',
-    'Kenkere House': 'Kenkere House'
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-blue-50">
@@ -85,7 +81,7 @@ const Index = () => {
                 <BarChart3 className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-wide">Studio Metrics Dashboard</h1>
+                <h1 className="text-2xl font-bold text-white tracking-wide">Client Conversion and Retention Analysis</h1>
                 <p className="text-slate-300 text-sm">Advanced Performance Analytics</p>
               </div>
             </div>
@@ -113,7 +109,7 @@ const Index = () => {
                 value={location}
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-xl font-bold text-lg transition-all duration-300 hover:scale-105 rounded-xl py-4"
               >
-                {locationDisplayNames[location as keyof typeof locationDisplayNames] || location}
+                {location}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -122,20 +118,22 @@ const Index = () => {
             <TabsContent key={location} value={location} className="mt-0">
               <LocationTab 
                 data={data[location]} 
-                locationName={locationDisplayNames[location as keyof typeof locationDisplayNames] || location}
+                locationName={location}
               />
             </TabsContent>
           ))}
         </Tabs>
 
         {/* Pinned Note Taker */}
-        <FloatingNoteTaker
-          storageKey="dashboard-notes-pinned"
-          title="Dashboard Notes"
-          isPinned={isFloatingNotePinned}
-          onPinToggle={setIsFloatingNotePinned}
-          className="mt-8"
-        />
+        {isFloatingNotePinned && (
+          <FloatingNoteTaker
+            storageKey="dashboard-notes-pinned"
+            title="Dashboard Notes"
+            isPinned={isFloatingNotePinned}
+            onPinToggle={setIsFloatingNotePinned}
+            className="mt-8"
+          />
+        )}
       </div>
 
       {/* Floating Note Taker */}
@@ -149,7 +147,7 @@ const Index = () => {
       <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 backdrop-blur-md border-t border-slate-600 mt-20">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-6">
           <div className="text-center text-slate-300">
-            <p className="font-semibold">© 2024 Studio Metrics Dashboard. Data updated in real-time.</p>
+            <p className="font-semibold">© 2024 Client Conversion and Retention Analysis. Data updated in real-time.</p>
           </div>
         </div>
       </div>
