@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MetricData } from '@/utils/csvParser';
 import { formatCurrency, formatPercentage, formatNumber } from '@/utils/formatters';
 import { Card } from '@/components/ui/card';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MetricsTableProps {
   data: MetricData[];
@@ -10,9 +12,21 @@ interface MetricsTableProps {
 }
 
 const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  
   const metricData = data.filter(item => item.metric === metric);
   
   if (metricData.length === 0) return null;
+
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
+  };
 
   const formatValue = (value: string, metricType: string) => {
     if (!value || value === '' || value === '0') {
@@ -88,65 +102,113 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
         <p className="text-slate-300 text-sm mt-1">Performance metrics breakdown by category and product</p>
       </div>
       
-      {Object.entries(groupedData).map(([category, categoryData]) => (
-        <div key={category} className="mb-6 last:mb-0">
-          <div className="p-4 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 border-b border-slate-500">
-            <h4 className="text-lg font-bold text-white tracking-wide">{category}</h4>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                {/* Year Headers */}
-                <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
-                  <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            {/* Year Headers */}
+            <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
+              <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                  Category / Product
+                </div>
+              </th>
+              {Object.entries(yearGroups).map(([year, yearMonths]) => (
+                <th 
+                  key={year} 
+                  className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
+                  colSpan={yearMonths.length}
+                >
+                  <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                    {year}
+                  </div>
+                </th>
+              ))}
+              <th className="px-6 py-4 text-center text-lg font-bold text-white">
+                <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
+                  Total
+                </div>
+              </th>
+            </tr>
+            
+            {/* Month Headers */}
+            <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
+              <th className="px-6 py-3 border-r border-slate-300"></th>
+              {months.map(month => (
+                <th 
+                  key={month.key} 
+                  className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
+                >
+                  <div className="bg-white/20 rounded-lg py-1 px-2">
+                    {month.label}
+                  </div>
+                </th>
+              ))}
+              <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(groupedData).map(([category, categoryData]) => (
+              <React.Fragment key={category}>
+                {/* Category Header Row */}
+                <tr 
+                  className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 cursor-pointer hover:from-slate-600 hover:via-slate-500 hover:to-slate-600 transition-all duration-300"
+                  onClick={() => toggleCategory(category)}
+                >
+                  <td className="px-6 py-4 text-lg font-bold text-white border-r border-slate-400">
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                      Product
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-white/20 rounded-full text-white"
+                      >
+                        {expandedCategories.has(category) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                      {category.toUpperCase()}
                     </div>
-                  </th>
-                  {Object.entries(yearGroups).map(([year, yearMonths]) => (
-                    <th 
-                      key={year} 
-                      className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
-                      colSpan={yearMonths.length}
-                    >
-                      <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                        {year}
-                      </div>
-                    </th>
-                  ))}
-                  <th className="px-6 py-4 text-center text-lg font-bold text-white">
-                    <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
-                      Total
+                  </td>
+                  {months.map(month => {
+                    const total = categoryData.reduce((sum, item) => {
+                      const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
+                      return sum + value;
+                    }, 0);
+                    return (
+                      <td 
+                        key={month.key} 
+                        className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
+                      >
+                        <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                          {formatValue(total.toString(), metric)}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="px-6 py-4 text-center text-base font-bold text-white">
+                    <div className="bg-white/30 rounded-lg p-2 backdrop-blur-sm">
+                      {(() => {
+                        const total = categoryData.reduce((sum, item) => {
+                          const value = parseFloat(item.total.replace(/[₹,]/g, '')) || 0;
+                          return sum + value;
+                        }, 0);
+                        return formatValue(total.toString(), metric);
+                      })()}
                     </div>
-                  </th>
+                  </td>
                 </tr>
-                
-                {/* Month Headers */}
-                <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
-                  <th className="px-6 py-3 border-r border-slate-300"></th>
-                  {months.map(month => (
-                    <th 
-                      key={month.key} 
-                      className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
-                    >
-                      <div className="bg-white/20 rounded-lg py-1 px-2">
-                        {month.label}
-                      </div>
-                    </th>
-                  ))}
-                  <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {categoryData.map((row, index) => (
+
+                {/* Product Rows (Collapsible) */}
+                {expandedCategories.has(category) && categoryData.map((row, index) => (
                   <tr 
-                    key={index} 
+                    key={`${category}-${index}`} 
                     className={`${index % 2 === 0 ? 'bg-white/60' : 'bg-slate-50/60'} hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 hover:shadow-lg border-b border-slate-200/50`}
                   >
-                    <td className="px-6 py-4 text-sm font-bold text-slate-900 border-r border-slate-200/50">
-                      <div className="flex flex-col">
+                    <td className="px-6 py-4 text-sm font-bold text-slate-900 border-r border-slate-200/50 pl-16">
+                      <div className="flex flex-col border-l-4 border-blue-400 pl-4 py-1 rounded-r-lg bg-white/60 shadow-sm">
                         <div className="text-base font-bold">{row.product}</div>
                         <div className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
                       </div>
@@ -168,48 +230,11 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
                     </td>
                   </tr>
                 ))}
-                
-                {/* Category Totals Row */}
-                <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 border-t-4 border-emerald-500 shadow-lg">
-                  <td className="px-6 py-4 text-base font-bold text-white border-r border-emerald-400">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-                      {category.toUpperCase()} TOTAL
-                    </div>
-                  </td>
-                  {months.map(month => {
-                    const total = categoryData.reduce((sum, item) => {
-                      const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
-                      return sum + value;
-                    }, 0);
-                    return (
-                      <td 
-                        key={month.key} 
-                        className="px-3 py-4 text-center text-sm font-bold text-white border-r border-emerald-400"
-                      >
-                        <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                          {formatValue(total.toString(), metric)}
-                        </div>
-                      </td>
-                    );
-                  })}
-                  <td className="px-6 py-4 text-center text-base font-bold text-white">
-                    <div className="bg-white/30 rounded-lg p-2 backdrop-blur-sm">
-                      {(() => {
-                        const total = categoryData.reduce((sum, item) => {
-                          const value = parseFloat(item.total.replace(/[₹,]/g, '')) || 0;
-                          return sum + value;
-                        }, 0);
-                        return formatValue(total.toString(), metric);
-                      })()}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Card>
   );
 };
