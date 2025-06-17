@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MetricData, getUniqueMetrics } from '@/utils/csvParser';
 import { formatCurrency, formatPercentage, formatNumber } from '@/utils/formatters';
@@ -97,6 +96,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
     );
   };
 
+  // Filter data to only show rows for the selected metric
   const metricData = data.filter(item => item.metric === selectedMetric);
 
   // All 18 months in descending order (2025-Jun to 2024-Jan)
@@ -269,60 +269,78 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Metrics Selector */}
-      <Card className="backdrop-blur-md bg-white/95 border border-slate-200/50 shadow-xl rounded-2xl overflow-hidden">
-        <div className="p-6 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
-              <BarChart3 className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white tracking-wide">Performance Metrics</h2>
-              <p className="text-slate-300 text-sm">Select a metric to analyze performance trends</p>
-            </div>
-          </div>
+      {/* Enhanced Metrics Selector */}
+      <Card className="backdrop-blur-md bg-white/95 border border-slate-200/50 shadow-2xl rounded-3xl overflow-hidden">
+        <div className="p-8 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/5 to-teal-600/10"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-teal-500"></div>
           
-          <Tabs value={selectedMetric} onValueChange={setSelectedMetric}>
-            <ScrollArea className="w-full">
-              <TabsList className="flex bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1 min-w-max">
-                {availableMetrics.map(metric => (
-                  <TabsTrigger 
-                    key={metric} 
-                    value={metric} 
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-white/10 transition-all duration-300 rounded-lg py-3 px-4 text-white font-semibold whitespace-nowrap flex-shrink-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="text-sm">{metric}</span>
-                    </div>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </Tabs>
-
-          {/* View Mode Toggle */}
-          <div className="mt-4">
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'chronological' | 'year-on-year' | 'quarter' | 'comparative')}>
+          <div className="relative z-10">
+            <div className="flex items-center gap-6 mb-6">
+              <div className="relative">
+                <div className="p-4 bg-gradient-to-br from-blue-500 via-purple-600 to-teal-500 rounded-2xl shadow-2xl">
+                  <BarChart3 className="h-8 w-8 text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent tracking-wide">
+                  Performance Metrics
+                </h2>
+                <p className="text-slate-300 text-sm mt-2 font-medium">Select a metric to analyze performance trends and insights</p>
+              </div>
+            </div>
+            
+            <Tabs value={selectedMetric} onValueChange={setSelectedMetric}>
               <ScrollArea className="w-full">
-                <TabsList className="flex bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1 min-w-max">
-                  <TabsTrigger value="chronological" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-teal-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0">
-                    Chronological View
-                  </TabsTrigger>
-                  <TabsTrigger value="year-on-year" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0">
-                    Year-on-Year View
-                  </TabsTrigger>
-                  <TabsTrigger value="quarter" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0">
-                    Quarter View
-                  </TabsTrigger>
-                  <TabsTrigger value="comparative" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0">
-                    Comparative Analysis
-                  </TabsTrigger>
+                <TabsList className="flex bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 backdrop-blur-md border border-slate-600/50 rounded-2xl p-2 min-w-max shadow-2xl">
+                  {availableMetrics.map(metric => (
+                    <TabsTrigger 
+                      key={metric} 
+                      value={metric} 
+                      className="relative group data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-600 data-[state=active]:via-purple-600 data-[state=active]:to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-2xl hover:bg-gradient-to-br hover:from-slate-700/80 hover:to-slate-600/80 transition-all duration-500 rounded-xl py-4 px-6 text-slate-300 font-bold whitespace-nowrap flex-shrink-0 border border-transparent data-[state=active]:border-white/20"
+                    >
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="p-2 rounded-lg bg-white/10 group-data-[state=active]:bg-white/20 transition-all duration-300">
+                          <TrendingUp className="h-5 w-5" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-bold tracking-wide">{metric}</div>
+                          <div className="text-xs opacity-75 mt-1 font-medium">Analysis</div>
+                        </div>
+                      </div>
+                      {/* Active indicator */}
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-teal-500/20 opacity-0 group-data-[state=active]:opacity-100 transition-all duration-500"></div>
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
                 <ScrollBar orientation="horizontal" />
               </ScrollArea>
             </Tabs>
+
+            {/* Enhanced View Mode Toggle */}
+            <div className="mt-6">
+              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'chronological' | 'year-on-year' | 'quarter' | 'comparative')}>
+                <ScrollArea className="w-full">
+                  <TabsList className="flex bg-gradient-to-r from-slate-700/40 via-slate-600/40 to-slate-700/40 backdrop-blur-md border border-slate-500/50 rounded-xl p-1 min-w-max shadow-xl">
+                    <TabsTrigger value="chronological" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 font-bold whitespace-nowrap flex-shrink-0 px-4 py-2 rounded-lg transition-all duration-300">
+                      Chronological View
+                    </TabsTrigger>
+                    <TabsTrigger value="year-on-year" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 font-bold whitespace-nowrap flex-shrink-0 px-4 py-2 rounded-lg transition-all duration-300">
+                      Year-on-Year View
+                    </TabsTrigger>
+                    <TabsTrigger value="quarter" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 font-bold whitespace-nowrap flex-shrink-0 px-4 py-2 rounded-lg transition-all duration-300">
+                      Quarter View
+                    </TabsTrigger>
+                    <TabsTrigger value="comparative" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 font-bold whitespace-nowrap flex-shrink-0 px-4 py-2 rounded-lg transition-all duration-300">
+                      Comparative Analysis
+                    </TabsTrigger>
+                  </TabsList>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </Tabs>
+            </div>
           </div>
         </div>
       </Card>
@@ -758,7 +776,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
 
       {/* Floating Note Taker - Collapsed by default */}
       {!isPinnedNoteTaker && (
-        <div className="fixed bottom-4 right-4 z-50">
+        <div className="fixed bottom-4 right-4 z-40">
           <FloatingNoteTaker
             storageKey={`notes-${selectedMetric}`}
             title={`${selectedMetric} Notes`}
