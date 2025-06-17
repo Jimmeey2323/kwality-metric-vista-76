@@ -14,6 +14,7 @@ interface MetricsTableProps {
 const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedMetric, setSelectedMetric] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'chronological' | 'year-on-year'>('chronological');
   
   const availableMetrics = getUniqueMetrics(data);
   
@@ -89,38 +90,66 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
   const metricData = data.filter(item => item.metric === selectedMetric);
 
   // All 23 months in descending order (2025-May to 2023-Jul)
-  const months = [
-    { key: '2025-may' as keyof MetricData, label: 'May 25', quarter: 'Q2', year: 2025 },
-    { key: '2025-apr' as keyof MetricData, label: 'Apr 25', quarter: 'Q2', year: 2025 },
-    { key: '2025-mar' as keyof MetricData, label: 'Mar 25', quarter: 'Q1', year: 2025 },
-    { key: '2025-feb' as keyof MetricData, label: 'Feb 25', quarter: 'Q1', year: 2025 },
-    { key: '2025-jan' as keyof MetricData, label: 'Jan 25', quarter: 'Q1', year: 2025 },
-    { key: '2024-dec' as keyof MetricData, label: 'Dec 24', quarter: 'Q4', year: 2024 },
-    { key: '2024-nov' as keyof MetricData, label: 'Nov 24', quarter: 'Q4', year: 2024 },
-    { key: '2024-oct' as keyof MetricData, label: 'Oct 24', quarter: 'Q4', year: 2024 },
-    { key: '2024-sep' as keyof MetricData, label: 'Sep 24', quarter: 'Q3', year: 2024 },
-    { key: '2024-aug' as keyof MetricData, label: 'Aug 24', quarter: 'Q3', year: 2024 },
-    { key: '2024-jul' as keyof MetricData, label: 'Jul 24', quarter: 'Q3', year: 2024 },
-    { key: '2024-jun' as keyof MetricData, label: 'Jun 24', quarter: 'Q2', year: 2024 },
-    { key: '2024-may' as keyof MetricData, label: 'May 24', quarter: 'Q2', year: 2024 },
-    { key: '2024-apr' as keyof MetricData, label: 'Apr 24', quarter: 'Q2', year: 2024 },
-    { key: '2024-mar' as keyof MetricData, label: 'Mar 24', quarter: 'Q1', year: 2024 },
-    { key: '2024-feb' as keyof MetricData, label: 'Feb 24', quarter: 'Q1', year: 2024 },
-    { key: '2024-jan' as keyof MetricData, label: 'Jan 24', quarter: 'Q1', year: 2024 },
-    { key: '2023-dec' as keyof MetricData, label: 'Dec 23', quarter: 'Q4', year: 2023 },
-    { key: '2023-nov' as keyof MetricData, label: 'Nov 23', quarter: 'Q4', year: 2023 },
-    { key: '2023-oct' as keyof MetricData, label: 'Oct 23', quarter: 'Q4', year: 2023 },
-    { key: '2023-sep' as keyof MetricData, label: 'Sep 23', quarter: 'Q3', year: 2023 },
-    { key: '2023-aug' as keyof MetricData, label: 'Aug 23', quarter: 'Q3', year: 2023 },
-    { key: '2023-jul' as keyof MetricData, label: 'Jul 23', quarter: 'Q3', year: 2023 }
+  const allMonths = [
+    { key: '2025-may' as keyof MetricData, label: 'May 25', quarter: 'Q2', year: 2025, month: 5 },
+    { key: '2025-apr' as keyof MetricData, label: 'Apr 25', quarter: 'Q2', year: 2025, month: 4 },
+    { key: '2025-mar' as keyof MetricData, label: 'Mar 25', quarter: 'Q1', year: 2025, month: 3 },
+    { key: '2025-feb' as keyof MetricData, label: 'Feb 25', quarter: 'Q1', year: 2025, month: 2 },
+    { key: '2025-jan' as keyof MetricData, label: 'Jan 25', quarter: 'Q1', year: 2025, month: 1 },
+    { key: '2024-dec' as keyof MetricData, label: 'Dec 24', quarter: 'Q4', year: 2024, month: 12 },
+    { key: '2024-nov' as keyof MetricData, label: 'Nov 24', quarter: 'Q4', year: 2024, month: 11 },
+    { key: '2024-oct' as keyof MetricData, label: 'Oct 24', quarter: 'Q4', year: 2024, month: 10 },
+    { key: '2024-sep' as keyof MetricData, label: 'Sep 24', quarter: 'Q3', year: 2024, month: 9 },
+    { key: '2024-aug' as keyof MetricData, label: 'Aug 24', quarter: 'Q3', year: 2024, month: 8 },
+    { key: '2024-jul' as keyof MetricData, label: 'Jul 24', quarter: 'Q3', year: 2024, month: 7 },
+    { key: '2024-jun' as keyof MetricData, label: 'Jun 24', quarter: 'Q2', year: 2024, month: 6 },
+    { key: '2024-may' as keyof MetricData, label: 'May 24', quarter: 'Q2', year: 2024, month: 5 },
+    { key: '2024-apr' as keyof MetricData, label: 'Apr 24', quarter: 'Q2', year: 2024, month: 4 },
+    { key: '2024-mar' as keyof MetricData, label: 'Mar 24', quarter: 'Q1', year: 2024, month: 3 },
+    { key: '2024-feb' as keyof MetricData, label: 'Feb 24', quarter: 'Q1', year: 2024, month: 2 },
+    { key: '2024-jan' as keyof MetricData, label: 'Jan 24', quarter: 'Q1', year: 2024, month: 1 },
+    { key: '2023-dec' as keyof MetricData, label: 'Dec 23', quarter: 'Q4', year: 2023, month: 12 },
+    { key: '2023-nov' as keyof MetricData, label: 'Nov 23', quarter: 'Q4', year: 2023, month: 11 },
+    { key: '2023-oct' as keyof MetricData, label: 'Oct 23', quarter: 'Q4', year: 2023, month: 10 },
+    { key: '2023-sep' as keyof MetricData, label: 'Sep 23', quarter: 'Q3', year: 2023, month: 9 },
+    { key: '2023-aug' as keyof MetricData, label: 'Aug 23', quarter: 'Q3', year: 2023, month: 8 },
+    { key: '2023-jul' as keyof MetricData, label: 'Jul 23', quarter: 'Q3', year: 2023, month: 7 }
   ];
 
+  // Year-on-year view: group by month name, sort by year descending
+  const getYearOnYearMonths = () => {
+    const monthGroups: { [monthName: string]: typeof allMonths } = {};
+    
+    allMonths.forEach(month => {
+      const monthName = month.label.split(' ')[0]; // Extract month name (e.g., "May", "Apr")
+      if (!monthGroups[monthName]) {
+        monthGroups[monthName] = [];
+      }
+      monthGroups[monthName].push(month);
+    });
+    
+    // Sort each month group by year descending
+    Object.keys(monthGroups).forEach(monthName => {
+      monthGroups[monthName].sort((a, b) => b.year - a.year);
+    });
+    
+    // Return months in chronological order (Jan to Dec)
+    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return monthOrder.map(monthName => ({
+      monthName,
+      columns: monthGroups[monthName] || []
+    })).filter(group => group.columns.length > 0);
+  };
+
+  const months = viewMode === 'chronological' ? allMonths : allMonths; // We'll handle year-on-year display differently
+  const yearOnYearGroups = getYearOnYearMonths();
+
   // Group months by year (in descending order: 2025, 2024, 2023)
-  const yearGroups = months.reduce((acc, month) => {
+  const yearGroups = allMonths.reduce((acc, month) => {
     if (!acc[month.year]) acc[month.year] = [];
     acc[month.year].push(month);
     return acc;
-  }, {} as Record<number, typeof months>);
+  }, {} as Record<number, typeof allMonths>);
 
   // Sort years in descending order
   const sortedYears = Object.keys(yearGroups).map(Number).sort((a, b) => b - a);
@@ -134,6 +163,22 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
     acc[category].push(item);
     return acc;
   }, {} as Record<string, MetricData[]>);
+
+  // Calculate totals for each month
+  const calculateMonthTotal = (monthKey: string) => {
+    return metricData.reduce((sum, item) => {
+      const value = parseFloat((item[monthKey as keyof MetricData] as string)?.replace(/[₹,]/g, '') || '0');
+      return sum + value;
+    }, 0);
+  };
+
+  // Calculate grand total
+  const calculateGrandTotal = () => {
+    return metricData.reduce((sum, item) => {
+      const value = parseFloat(item.total.replace(/[₹,]/g, '') || '0');
+      return sum + value;
+    }, 0);
+  };
 
   if (availableMetrics.length === 0) {
     return (
@@ -159,7 +204,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
           </div>
           
           <Tabs value={selectedMetric} onValueChange={setSelectedMetric}>
-            <TabsList className={`grid grid-cols-${Math.min(availableMetrics.length, 4)} bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1`}>
+            <TabsList className="grid bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1" style={{ gridTemplateColumns: `repeat(${availableMetrics.length}, 1fr)` }}>
               {availableMetrics.map((metric) => (
                 <TabsTrigger 
                   key={metric} 
@@ -174,6 +219,26 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
               ))}
             </TabsList>
           </Tabs>
+
+          {/* View Mode Toggle */}
+          <div className="mt-4">
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'chronological' | 'year-on-year')}>
+              <TabsList className="grid grid-cols-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1">
+                <TabsTrigger 
+                  value="chronological"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-teal-600 data-[state=active]:text-white text-white font-semibold"
+                >
+                  Chronological View
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="year-on-year"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white text-white font-semibold"
+                >
+                  Year-on-Year View
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       </Card>
 
@@ -182,53 +247,105 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
         <Card className="overflow-hidden backdrop-blur-md bg-white/90 border border-slate-200/50 shadow-2xl rounded-2xl">
           <div className="p-6 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 border-b border-slate-500">
             <h3 className="text-xl font-bold text-white tracking-wide">{selectedMetric}</h3>
-            <p className="text-slate-300 text-sm mt-1">Detailed breakdown by category and product</p>
+            <p className="text-slate-300 text-sm mt-1">
+              {viewMode === 'chronological' ? 'Chronological breakdown by category and product' : 'Year-on-year comparison by month'}
+            </p>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                {/* Year Headers */}
-                <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
-                  <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                      Category / Product
-                    </div>
-                  </th>
-                  {sortedYears.map((year) => (
-                    <th 
-                      key={year} 
-                      className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
-                      colSpan={yearGroups[year].length}
-                    >
-                      <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                        {year}
-                      </div>
-                    </th>
-                  ))}
-                  <th className="px-6 py-4 text-center text-lg font-bold text-white">
-                    <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
-                      Total
-                    </div>
-                  </th>
-                </tr>
-                
-                {/* Month Headers */}
-                <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
-                  <th className="px-6 py-3 border-r border-slate-300"></th>
-                  {months.map(month => (
-                    <th 
-                      key={month.key} 
-                      className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
-                    >
-                      <div className="bg-white/20 rounded-lg py-1 px-2">
-                        {month.label}
-                      </div>
-                    </th>
-                  ))}
-                  <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
-                </tr>
+                {viewMode === 'chronological' ? (
+                  <>
+                    {/* Year Headers */}
+                    <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
+                      <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                          Category / Product
+                        </div>
+                      </th>
+                      {sortedYears.map((year) => (
+                        <th 
+                          key={year} 
+                          className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
+                          colSpan={yearGroups[year].length}
+                        >
+                          <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                            {year}
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-6 py-4 text-center text-lg font-bold text-white">
+                        <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
+                          Total
+                        </div>
+                      </th>
+                    </tr>
+                    
+                    {/* Month Headers */}
+                    <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
+                      <th className="px-6 py-3 border-r border-slate-300"></th>
+                      {months.map(month => (
+                        <th 
+                          key={month.key} 
+                          className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
+                        >
+                          <div className="bg-white/20 rounded-lg py-1 px-2">
+                            {month.label}
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    {/* Year-on-Year Headers */}
+                    <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
+                      <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
+                          Category / Product
+                        </div>
+                      </th>
+                      {yearOnYearGroups.map((group) => (
+                        <th 
+                          key={group.monthName} 
+                          className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
+                          colSpan={group.columns.length}
+                        >
+                          <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                            {group.monthName}
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-6 py-4 text-center text-lg font-bold text-white">
+                        <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
+                          Total
+                        </div>
+                      </th>
+                    </tr>
+                    
+                    {/* Year Sub-headers */}
+                    <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
+                      <th className="px-6 py-3 border-r border-slate-300"></th>
+                      {yearOnYearGroups.map((group) => 
+                        group.columns.map(month => (
+                          <th 
+                            key={month.key} 
+                            className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
+                          >
+                            <div className="bg-white/20 rounded-lg py-1 px-2">
+                              {month.year}
+                            </div>
+                          </th>
+                        ))
+                      )}
+                      <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
+                    </tr>
+                  </>
+                )}
               </thead>
               <tbody>
                 {Object.entries(groupedData).map(([category, categoryData]) => (
@@ -255,35 +372,75 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                           {category.toUpperCase()}
                         </div>
                       </td>
-                      {months.map((month, index) => {
-                        const total = categoryData.reduce((sum, item) => {
-                          const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
-                          return sum + value;
-                        }, 0);
-                        const previousMonth = index < months.length - 1 ? months[index + 1] : null;
-                        const previousTotal = previousMonth ? categoryData.reduce((sum, item) => {
-                          const value = parseFloat((item[previousMonth.key] as string).replace(/[₹,]/g, '')) || 0;
-                          return sum + value;
-                        }, 0) : 0;
-                        
-                        return (
-                          <td 
-                            key={month.key} 
-                            className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
-                          >
-                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
-                              {formatValue(total.toString(), selectedMetric)}
-                              {previousMonth && (
-                                <GrowthIndicator 
-                                  current={total.toString()} 
-                                  previous={previousTotal.toString()} 
-                                  metricType={selectedMetric} 
-                                />
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
+                      {viewMode === 'chronological' ? (
+                        <>
+                          {months.map((month, index) => {
+                            const total = categoryData.reduce((sum, item) => {
+                              const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
+                              return sum + value;
+                            }, 0);
+                            const previousMonth = index < months.length - 1 ? months[index + 1] : null;
+                            const previousTotal = previousMonth ? categoryData.reduce((sum, item) => {
+                              const value = parseFloat((item[previousMonth.key] as string).replace(/[₹,]/g, '')) || 0;
+                              return sum + value;
+                            }, 0) : 0;
+                            
+                            return (
+                              <td 
+                                key={month.key} 
+                                className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
+                              >
+                                <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
+                                  {formatValue(total.toString(), selectedMetric)}
+                                  {previousMonth && (
+                                    <GrowthIndicator 
+                                      current={total.toString()} 
+                                      previous={previousTotal.toString()} 
+                                      metricType={selectedMetric} 
+                                    />
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </>
+                      ) : (
+                        <>
+                          {yearOnYearGroups.map((group) => 
+                            group.columns.map((month, index) => {
+                              const total = categoryData.reduce((sum, item) => {
+                                const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
+                                return sum + value;
+                              }, 0);
+                              
+                              // Find same month from previous year for growth calculation
+                              const previousYearMonth = group.columns.find(m => m.year === month.year - 1);
+                              const previousTotal = previousYearMonth ? categoryData.reduce((sum, item) => {
+                                const value = parseFloat((item[previousYearMonth.key] as string).replace(/[₹,]/g, '')) || 0;
+                                return sum + value;
+                              }, 0) : 0;
+                              
+                              return (
+                                <td 
+                                  key={month.key} 
+                                  className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
+                                >
+                                  <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
+                                    {formatValue(total.toString(), selectedMetric)}
+                                    {previousYearMonth && previousTotal > 0 && (
+                                      <GrowthIndicator 
+                                        current={total.toString()} 
+                                        previous={previousTotal.toString()} 
+                                        metricType={selectedMetric} 
+                                      />
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })
+                          )}
+                        </>
+                      )}
                       <td className="px-6 py-4 text-center text-base font-bold text-white">
                         <div className="bg-white/30 rounded-lg p-2 backdrop-blur-sm">
                           {(() => {
@@ -309,31 +466,65 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                             <div className="text-xs text-slate-400 bg-slate-100/60 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
                           </div>
                         </td>
-                        {months.map((month, monthIndex) => {
-                          const currentValue = row[month.key] as string;
-                          const previousMonth = monthIndex < months.length - 1 ? months[monthIndex + 1] : null;
-                          const previousValue = previousMonth ? row[previousMonth.key] as string : '';
-                          
-                          return (
-                            <td 
-                              key={month.key} 
-                              className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
-                            >
-                              <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
-                                <span className="text-slate-400 font-medium">
-                                  {formatValue(currentValue, selectedMetric)}
-                                </span>
-                                {previousMonth && (
-                                  <GrowthIndicator 
-                                    current={currentValue} 
-                                    previous={previousValue} 
-                                    metricType={selectedMetric} 
-                                  />
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
+                        {viewMode === 'chronological' ? (
+                          <>
+                            {months.map((month, monthIndex) => {
+                              const currentValue = row[month.key] as string;
+                              const previousMonth = monthIndex < months.length - 1 ? months[monthIndex + 1] : null;
+                              const previousValue = previousMonth ? row[previousMonth.key] as string : '';
+                              
+                              return (
+                                <td 
+                                  key={month.key} 
+                                  className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
+                                >
+                                  <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
+                                    <span className="text-slate-400 font-medium">
+                                      {formatValue(currentValue, selectedMetric)}
+                                    </span>
+                                    {previousMonth && (
+                                      <GrowthIndicator 
+                                        current={currentValue} 
+                                        previous={previousValue} 
+                                        metricType={selectedMetric} 
+                                      />
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </>
+                        ) : (
+                          <>
+                            {yearOnYearGroups.map((group) => 
+                              group.columns.map((month) => {
+                                const currentValue = row[month.key] as string;
+                                const previousYearMonth = group.columns.find(m => m.year === month.year - 1);
+                                const previousValue = previousYearMonth ? row[previousYearMonth.key] as string : '';
+                                
+                                return (
+                                  <td 
+                                    key={month.key} 
+                                    className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
+                                  >
+                                    <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
+                                      <span className="text-slate-400 font-medium">
+                                        {formatValue(currentValue, selectedMetric)}
+                                      </span>
+                                      {previousYearMonth && (
+                                        <GrowthIndicator 
+                                          current={currentValue} 
+                                          previous={previousValue} 
+                                          metricType={selectedMetric} 
+                                        />
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              })
+                            )}
+                          </>
+                        )}
                         <td className="px-6 py-4 text-center text-base">
                           <div className="bg-emerald-50/60 rounded-lg p-2">
                             <span className="text-slate-500 font-semibold">
@@ -345,6 +536,50 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                     ))}
                   </React.Fragment>
                 ))}
+
+                {/* Totals Row */}
+                <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 font-bold border-t-4 border-emerald-500 shadow-lg">
+                  <td className="px-6 py-4 text-lg font-bold text-white border-r border-emerald-400">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                      TOTALS
+                    </div>
+                  </td>
+                  {viewMode === 'chronological' ? (
+                    <>
+                      {months.map((month) => (
+                        <td 
+                          key={month.key}
+                          className="px-3 py-4 text-center text-sm font-bold text-white border-r border-emerald-400"
+                        >
+                          <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                            {formatValue(calculateMonthTotal(month.key).toString(), selectedMetric)}
+                          </div>
+                        </td>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {yearOnYearGroups.map((group) => 
+                        group.columns.map((month) => (
+                          <td 
+                            key={month.key}
+                            className="px-3 py-4 text-center text-sm font-bold text-white border-r border-emerald-400"
+                          >
+                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                              {formatValue(calculateMonthTotal(month.key).toString(), selectedMetric)}
+                            </div>
+                          </td>
+                        ))
+                      )}
+                    </>
+                  )}
+                  <td className="px-6 py-4 text-center text-base font-bold text-white">
+                    <div className="bg-white/30 rounded-lg p-2 backdrop-blur-sm">
+                      {formatValue(calculateGrandTotal().toString(), selectedMetric)}
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
