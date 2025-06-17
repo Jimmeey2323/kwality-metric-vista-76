@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MetricData, getUniqueMetrics } from '@/utils/csvParser';
+import { MetricData } from '@/utils/csvParser';
 import MetricsTable from './MetricsTable';
 
 interface LocationTabProps {
@@ -9,8 +9,6 @@ interface LocationTabProps {
 }
 
 const LocationTab: React.FC<LocationTabProps> = ({ data, locationName }) => {
-  const metrics = getUniqueMetrics(data);
-  
   return (
     <div className="space-y-6">
       <div className="text-center py-6">
@@ -18,13 +16,7 @@ const LocationTab: React.FC<LocationTabProps> = ({ data, locationName }) => {
         <p className="text-gray-600">Performance Metrics Dashboard</p>
       </div>
       
-      {metrics.map(metric => (
-        <MetricsTable 
-          key={metric} 
-          data={data} 
-          metric={metric} 
-        />
-      ))}
+      <MetricsTable data={data} />
     </div>
   );
 };

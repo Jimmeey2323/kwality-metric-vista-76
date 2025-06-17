@@ -1,22 +1,28 @@
 
 import React, { useState } from 'react';
-import { MetricData } from '@/utils/csvParser';
+import { MetricData, getUniqueMetrics } from '@/utils/csvParser';
 import { formatCurrency, formatPercentage, formatNumber } from '@/utils/formatters';
 import { Card } from '@/components/ui/card';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, TrendingUp, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface MetricsTableProps {
   data: MetricData[];
-  metric: string;
 }
 
-const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
+const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [selectedMetric, setSelectedMetric] = useState<string>('');
   
-  const metricData = data.filter(item => item.metric === metric);
+  const availableMetrics = getUniqueMetrics(data);
   
-  if (metricData.length === 0) return null;
+  // Set default metric if not selected
+  React.useEffect(() => {
+    if (!selectedMetric && availableMetrics.length > 0) {
+      setSelectedMetric(availableMetrics[0]);
+    }
+  }, [availableMetrics, selectedMetric]);
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -50,6 +56,8 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
       return <span className="text-gray-900 font-bold">{formatNumber(numValue)}</span>;
     }
   };
+
+  const metricData = data.filter(item => item.metric === selectedMetric);
 
   // All 23 months in descending order (2025-May to 2023-Jul)
   const months = [
@@ -95,147 +103,196 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
     return acc;
   }, {} as Record<string, MetricData[]>);
 
+  if (availableMetrics.length === 0) {
+    return (
+      <Card className="p-8 text-center">
+        <p className="text-gray-500">No metrics data available</p>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="mb-8 overflow-hidden backdrop-blur-md bg-white/90 border border-slate-200/50 shadow-2xl rounded-2xl">
-      <div className="p-6 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-b border-slate-600">
-        <h3 className="text-2xl font-bold text-white tracking-wide">{metric}</h3>
-        <p className="text-slate-300 text-sm mt-1">Performance metrics breakdown by category and product</p>
-      </div>
-      
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            {/* Year Headers */}
-            <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
-              <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                  Category / Product
-                </div>
-              </th>
-              {Object.entries(yearGroups).map(([year, yearMonths]) => (
-                <th 
-                  key={year} 
-                  className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
-                  colSpan={yearMonths.length}
+    <div className="space-y-6">
+      {/* Metrics Selector */}
+      <Card className="backdrop-blur-md bg-white/95 border border-slate-200/50 shadow-xl rounded-2xl overflow-hidden">
+        <div className="p-6 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
+              <BarChart3 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-wide">Performance Metrics</h2>
+              <p className="text-slate-300 text-sm">Select a metric to analyze performance trends</p>
+            </div>
+          </div>
+          
+          <Tabs value={selectedMetric} onValueChange={setSelectedMetric}>
+            <TabsList className={`grid grid-cols-${Math.min(availableMetrics.length, 4)} bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1`}>
+              {availableMetrics.map((metric) => (
+                <TabsTrigger 
+                  key={metric} 
+                  value={metric}
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-white/10 transition-all duration-300 rounded-lg py-3 px-4 text-white font-semibold"
                 >
-                  <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                    {year}
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm">{metric}</span>
                   </div>
-                </th>
+                </TabsTrigger>
               ))}
-              <th className="px-6 py-4 text-center text-lg font-bold text-white">
-                <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
-                  Total
-                </div>
-              </th>
-            </tr>
-            
-            {/* Month Headers */}
-            <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
-              <th className="px-6 py-3 border-r border-slate-300"></th>
-              {months.map(month => (
-                <th 
-                  key={month.key} 
-                  className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
-                >
-                  <div className="bg-white/20 rounded-lg py-1 px-2">
-                    {month.label}
-                  </div>
-                </th>
-              ))}
-              <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(groupedData).map(([category, categoryData]) => (
-              <React.Fragment key={category}>
-                {/* Category Header Row */}
-                <tr 
-                  className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 cursor-pointer hover:from-slate-600 hover:via-slate-500 hover:to-slate-600 transition-all duration-300"
-                  onClick={() => toggleCategory(category)}
-                >
-                  <td className="px-6 py-4 text-lg font-bold text-white border-r border-slate-400">
+            </TabsList>
+          </Tabs>
+        </div>
+      </Card>
+
+      {/* Data Table */}
+      {selectedMetric && (
+        <Card className="overflow-hidden backdrop-blur-md bg-white/90 border border-slate-200/50 shadow-2xl rounded-2xl">
+          <div className="p-6 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 border-b border-slate-500">
+            <h3 className="text-xl font-bold text-white tracking-wide">{selectedMetric}</h3>
+            <p className="text-slate-300 text-sm mt-1">Detailed breakdown by category and product</p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                {/* Year Headers */}
+                <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
+                  <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
                     <div className="flex items-center gap-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 hover:bg-white/20 rounded-full text-white"
-                      >
-                        {expandedCategories.has(category) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                      {category.toUpperCase()}
+                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                      Category / Product
                     </div>
-                  </td>
-                  {months.map(month => {
-                    const total = categoryData.reduce((sum, item) => {
-                      const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
-                      return sum + value;
-                    }, 0);
-                    return (
-                      <td 
-                        key={month.key} 
-                        className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
-                      >
-                        <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                          {formatValue(total.toString(), metric)}
+                  </th>
+                  {Object.entries(yearGroups).map(([year, yearMonths]) => (
+                    <th 
+                      key={year} 
+                      className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
+                      colSpan={yearMonths.length}
+                    >
+                      <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                        {year}
+                      </div>
+                    </th>
+                  ))}
+                  <th className="px-6 py-4 text-center text-lg font-bold text-white">
+                    <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
+                      Total
+                    </div>
+                  </th>
+                </tr>
+                
+                {/* Month Headers */}
+                <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
+                  <th className="px-6 py-3 border-r border-slate-300"></th>
+                  {months.map(month => (
+                    <th 
+                      key={month.key} 
+                      className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
+                    >
+                      <div className="bg-white/20 rounded-lg py-1 px-2">
+                        {month.label}
+                      </div>
+                    </th>
+                  ))}
+                  <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(groupedData).map(([category, categoryData]) => (
+                  <React.Fragment key={category}>
+                    {/* Category Header Row */}
+                    <tr 
+                      className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 cursor-pointer hover:from-slate-600 hover:via-slate-500 hover:to-slate-600 transition-all duration-300"
+                      onClick={() => toggleCategory(category)}
+                    >
+                      <td className="px-6 py-4 text-lg font-bold text-white border-r border-slate-400">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-white/20 rounded-full text-white"
+                          >
+                            {expandedCategories.has(category) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                          {category.toUpperCase()}
                         </div>
                       </td>
-                    );
-                  })}
-                  <td className="px-6 py-4 text-center text-base font-bold text-white">
-                    <div className="bg-white/30 rounded-lg p-2 backdrop-blur-sm">
-                      {(() => {
+                      {months.map(month => {
                         const total = categoryData.reduce((sum, item) => {
-                          const value = parseFloat(item.total.replace(/[₹,]/g, '')) || 0;
+                          const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
                           return sum + value;
                         }, 0);
-                        return formatValue(total.toString(), metric);
-                      })()}
-                    </div>
-                  </td>
-                </tr>
-
-                {/* Product Rows (Collapsible) */}
-                {expandedCategories.has(category) && categoryData.map((row, index) => (
-                  <tr 
-                    key={`${category}-${index}`} 
-                    className={`${index % 2 === 0 ? 'bg-white/60' : 'bg-slate-50/60'} hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 hover:shadow-lg border-b border-slate-200/50`}
-                  >
-                    <td className="px-6 py-4 text-sm font-bold text-slate-900 border-r border-slate-200/50 pl-16">
-                      <div className="flex flex-col border-l-4 border-blue-400 pl-4 py-1 rounded-r-lg bg-white/60 shadow-sm">
-                        <div className="text-base font-bold">{row.product}</div>
-                        <div className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
-                      </div>
-                    </td>
-                    {months.map(month => (
-                      <td 
-                        key={month.key} 
-                        className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
-                      >
-                        <div className="p-2 rounded-lg hover:bg-white/80 transition-all duration-200">
-                          {formatValue(row[month.key] as string, metric)}
+                        return (
+                          <td 
+                            key={month.key} 
+                            className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
+                          >
+                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                              {formatValue(total.toString(), selectedMetric)}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-4 text-center text-base font-bold text-white">
+                        <div className="bg-white/30 rounded-lg p-2 backdrop-blur-sm">
+                          {(() => {
+                            const total = categoryData.reduce((sum, item) => {
+                              const value = parseFloat(item.total.replace(/[₹,]/g, '')) || 0;
+                              return sum + value;
+                            }, 0);
+                            return formatValue(total.toString(), selectedMetric);
+                          })()}
                         </div>
                       </td>
+                    </tr>
+
+                    {/* Product Rows (Collapsible) */}
+                    {expandedCategories.has(category) && categoryData.map((row, index) => (
+                      <tr 
+                        key={`${category}-${index}`} 
+                        className={`${index % 2 === 0 ? 'bg-white/40' : 'bg-slate-50/40'} hover:bg-gradient-to-r hover:from-blue-50/70 hover:to-purple-50/70 transition-all duration-300 hover:shadow-lg border-b border-slate-200/30`}
+                      >
+                        <td className="px-6 py-4 text-sm border-r border-slate-200/50 pl-16">
+                          <div className="flex flex-col border-l-4 border-blue-400/60 pl-4 py-1 rounded-r-lg bg-white/40 shadow-sm">
+                            <div className="text-base font-semibold text-slate-600">{row.product}</div>
+                            <div className="text-xs text-slate-400 bg-slate-100/60 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
+                          </div>
+                        </td>
+                        {months.map(month => (
+                          <td 
+                            key={month.key} 
+                            className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
+                          >
+                            <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200">
+                              <span className="text-slate-500 font-medium">
+                                {formatValue(row[month.key] as string, selectedMetric)}
+                              </span>
+                            </div>
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 text-center text-base">
+                          <div className="bg-emerald-50/60 rounded-lg p-2">
+                            <span className="text-slate-600 font-semibold">
+                              {formatValue(row.total, selectedMetric)}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
                     ))}
-                    <td className="px-6 py-4 text-center text-base font-bold text-slate-900">
-                      <div className="bg-emerald-50 rounded-lg p-2">
-                        {formatValue(row.total, metric)}
-                      </div>
-                    </td>
-                  </tr>
+                  </React.Fragment>
                 ))}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
   );
 };
 
