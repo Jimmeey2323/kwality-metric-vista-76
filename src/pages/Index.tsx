@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import { parseCSVSync, groupDataByLocation, MetricData } from '@/utils/csvParser';
+import { parseCSV, groupDataByLocation, MetricData } from '@/utils/csvParser';
 import LocationTab from '@/components/LocationTab';
 import { Loader2, Building2, TrendingUp, BarChart3 } from 'lucide-react';
 
@@ -20,7 +20,8 @@ const Index = () => {
         const csvText = await response.text();
         console.log('CSV loaded, first 500 chars:', csvText.substring(0, 500));
         
-        const parsedData = parseCSVSync(csvText);
+        // Use the async parseCSV function
+        const parsedData = await parseCSV(csvText);
         console.log('Parsed data sample:', parsedData.slice(0, 3));
         
         const groupedData = groupDataByLocation(parsedData);

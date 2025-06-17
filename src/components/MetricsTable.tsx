@@ -37,23 +37,39 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
     }
   };
 
-  // Sort months in descending order (Dec to Jan)
+  // All 23 months in descending order (2025-May to 2023-Jul)
   const months = [
-    { key: 'dec' as keyof MetricData, label: 'Dec', quarter: 'Q4' },
-    { key: 'nov' as keyof MetricData, label: 'Nov', quarter: 'Q4' },
-    { key: 'oct' as keyof MetricData, label: 'Oct', quarter: 'Q4' },
-    { key: 'sep' as keyof MetricData, label: 'Sep', quarter: 'Q3' },
-    { key: 'aug' as keyof MetricData, label: 'Aug', quarter: 'Q3' },
-    { key: 'jul' as keyof MetricData, label: 'Jul', quarter: 'Q3' },
-    { key: 'jun' as keyof MetricData, label: 'Jun', quarter: 'Q2' },
-    { key: 'may' as keyof MetricData, label: 'May', quarter: 'Q2' },
-    { key: 'apr' as keyof MetricData, label: 'Apr', quarter: 'Q2' },
-    { key: 'mar' as keyof MetricData, label: 'Mar', quarter: 'Q1' },
-    { key: 'feb' as keyof MetricData, label: 'Feb', quarter: 'Q1' },
-    { key: 'jan' as keyof MetricData, label: 'Jan', quarter: 'Q1' }
+    { key: '2025-may' as keyof MetricData, label: 'May 25', quarter: 'Q2', year: 2025 },
+    { key: '2025-apr' as keyof MetricData, label: 'Apr 25', quarter: 'Q2', year: 2025 },
+    { key: '2025-mar' as keyof MetricData, label: 'Mar 25', quarter: 'Q1', year: 2025 },
+    { key: '2025-feb' as keyof MetricData, label: 'Feb 25', quarter: 'Q1', year: 2025 },
+    { key: '2025-jan' as keyof MetricData, label: 'Jan 25', quarter: 'Q1', year: 2025 },
+    { key: '2024-dec' as keyof MetricData, label: 'Dec 24', quarter: 'Q4', year: 2024 },
+    { key: '2024-nov' as keyof MetricData, label: 'Nov 24', quarter: 'Q4', year: 2024 },
+    { key: '2024-oct' as keyof MetricData, label: 'Oct 24', quarter: 'Q4', year: 2024 },
+    { key: '2024-sep' as keyof MetricData, label: 'Sep 24', quarter: 'Q3', year: 2024 },
+    { key: '2024-aug' as keyof MetricData, label: 'Aug 24', quarter: 'Q3', year: 2024 },
+    { key: '2024-jul' as keyof MetricData, label: 'Jul 24', quarter: 'Q3', year: 2024 },
+    { key: '2024-jun' as keyof MetricData, label: 'Jun 24', quarter: 'Q2', year: 2024 },
+    { key: '2024-may' as keyof MetricData, label: 'May 24', quarter: 'Q2', year: 2024 },
+    { key: '2024-apr' as keyof MetricData, label: 'Apr 24', quarter: 'Q2', year: 2024 },
+    { key: '2024-mar' as keyof MetricData, label: 'Mar 24', quarter: 'Q1', year: 2024 },
+    { key: '2024-feb' as keyof MetricData, label: 'Feb 24', quarter: 'Q1', year: 2024 },
+    { key: '2024-jan' as keyof MetricData, label: 'Jan 24', quarter: 'Q1', year: 2024 },
+    { key: '2023-dec' as keyof MetricData, label: 'Dec 23', quarter: 'Q4', year: 2023 },
+    { key: '2023-nov' as keyof MetricData, label: 'Nov 23', quarter: 'Q4', year: 2023 },
+    { key: '2023-oct' as keyof MetricData, label: 'Oct 23', quarter: 'Q4', year: 2023 },
+    { key: '2023-sep' as keyof MetricData, label: 'Sep 23', quarter: 'Q3', year: 2023 },
+    { key: '2023-aug' as keyof MetricData, label: 'Aug 23', quarter: 'Q3', year: 2023 },
+    { key: '2023-jul' as keyof MetricData, label: 'Jul 23', quarter: 'Q3', year: 2023 }
   ];
 
-  const quarters = ['Q4', 'Q3', 'Q2', 'Q1'];
+  // Group months by year for header display
+  const yearGroups = months.reduce((acc, month) => {
+    if (!acc[month.year]) acc[month.year] = [];
+    acc[month.year].push(month);
+    return acc;
+  }, {} as Record<number, typeof months>);
 
   // Group data by category
   const groupedData = metricData.reduce((acc, item) => {
@@ -81,7 +97,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                {/* Quarter Headers */}
+                {/* Year Headers */}
                 <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
                   <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
                     <div className="flex items-center gap-3">
@@ -89,14 +105,14 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
                       Product
                     </div>
                   </th>
-                  {quarters.map(quarter => (
+                  {Object.entries(yearGroups).map(([year, yearMonths]) => (
                     <th 
-                      key={quarter} 
+                      key={year} 
                       className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
-                      colSpan={3}
+                      colSpan={yearMonths.length}
                     >
                       <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
-                        {quarter}
+                        {year}
                       </div>
                     </th>
                   ))}
@@ -110,20 +126,16 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
                 {/* Month Headers */}
                 <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
                   <th className="px-6 py-3 border-r border-slate-300"></th>
-                  {quarters.map(quarter => 
-                    months
-                      .filter(month => month.quarter === quarter)
-                      .map(month => (
-                        <th 
-                          key={month.key} 
-                          className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
-                        >
-                          <div className="bg-white/20 rounded-lg py-1 px-2">
-                            {month.label}
-                          </div>
-                        </th>
-                      ))
-                  )}
+                  {months.map(month => (
+                    <th 
+                      key={month.key} 
+                      className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
+                    >
+                      <div className="bg-white/20 rounded-lg py-1 px-2">
+                        {month.label}
+                      </div>
+                    </th>
+                  ))}
                   <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
                 </tr>
               </thead>
@@ -135,7 +147,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data, metric }) => {
                   >
                     <td className="px-6 py-4 text-sm font-bold text-slate-900 border-r border-slate-200/50">
                       <div className="flex flex-col">
-                        <div className="text-base font-bold">{row.package}</div>
+                        <div className="text-base font-bold">{row.product}</div>
                         <div className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
                       </div>
                     </td>
