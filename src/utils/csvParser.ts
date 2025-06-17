@@ -21,7 +21,7 @@ export interface MetricData {
   metric: string;
 }
 
-export const parseCSV = (csvText: string): MetricData[] => {
+export const parseCSV = (csvText: string): Promise<MetricData[]> => {
   return new Promise((resolve, reject) => {
     Papa.parse(csvText, {
       header: false,
