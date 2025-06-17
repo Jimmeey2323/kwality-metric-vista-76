@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MetricData, getUniqueMetrics } from '@/utils/csvParser';
 import { formatCurrency, formatPercentage, formatNumber } from '@/utils/formatters';
@@ -98,8 +99,9 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
 
   const metricData = data.filter(item => item.metric === selectedMetric);
 
-  // All 23 months in descending order (2025-May to 2023-Jul)
+  // All 18 months in descending order (2025-Jun to 2024-Jan)
   const allMonths = [
+    { key: '2025-jun' as keyof MetricData, label: 'Jun 25', quarter: 'Q2', year: 2025, month: 6 },
     { key: '2025-may' as keyof MetricData, label: 'May 25', quarter: 'Q2', year: 2025, month: 5 },
     { key: '2025-apr' as keyof MetricData, label: 'Apr 25', quarter: 'Q2', year: 2025, month: 4 },
     { key: '2025-mar' as keyof MetricData, label: 'Mar 25', quarter: 'Q1', year: 2025, month: 3 },
@@ -116,20 +118,14 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
     { key: '2024-apr' as keyof MetricData, label: 'Apr 24', quarter: 'Q2', year: 2024, month: 4 },
     { key: '2024-mar' as keyof MetricData, label: 'Mar 24', quarter: 'Q1', year: 2024, month: 3 },
     { key: '2024-feb' as keyof MetricData, label: 'Feb 24', quarter: 'Q1', year: 2024, month: 2 },
-    { key: '2024-jan' as keyof MetricData, label: 'Jan 24', quarter: 'Q1', year: 2024, month: 1 },
-    { key: '2023-dec' as keyof MetricData, label: 'Dec 23', quarter: 'Q4', year: 2023, month: 12 },
-    { key: '2023-nov' as keyof MetricData, label: 'Nov 23', quarter: 'Q4', year: 2023, month: 11 },
-    { key: '2023-oct' as keyof MetricData, label: 'Oct 23', quarter: 'Q4', year: 2023, month: 10 },
-    { key: '2023-sep' as keyof MetricData, label: 'Sep 23', quarter: 'Q3', year: 2023, month: 9 },
-    { key: '2023-aug' as keyof MetricData, label: 'Aug 23', quarter: 'Q3', year: 2023, month: 8 },
-    { key: '2023-jul' as keyof MetricData, label: 'Jul 23', quarter: 'Q3', year: 2023, month: 7 }
+    { key: '2024-jan' as keyof MetricData, label: 'Jan 24', quarter: 'Q1', year: 2024, month: 1 }
   ];
 
-  // Year-on-year view: group by month name, sort by year descending, then sort months May-Jan
+  // Year-on-year view: group by month name, sort by year descending, then sort months Jun-Jan
   const getYearOnYearMonths = () => {
     const monthGroups: { [monthName: string]: typeof allMonths } = {};
     allMonths.forEach(month => {
-      const monthName = month.label.split(' ')[0]; // Extract month name (e.g., "May", "Apr")
+      const monthName = month.label.split(' ')[0]; // Extract month name (e.g., "Jun", "May")
       if (!monthGroups[monthName]) {
         monthGroups[monthName] = [];
       }
@@ -141,8 +137,8 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
       monthGroups[monthName].sort((a, b) => b.year - a.year);
     });
 
-    // Return months in May-Jan order (May first, Jan last)
-    const monthOrder = ['May', 'Apr', 'Mar', 'Feb', 'Jan', 'Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul', 'Jun'];
+    // Return months in Jun-Jan order (Jun first, Jan last)
+    const monthOrder = ['Jun', 'May', 'Apr', 'Mar', 'Feb', 'Jan', 'Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul'];
     return monthOrder.map(monthName => ({
       monthName,
       columns: monthGroups[monthName] || []
@@ -169,7 +165,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
   const yearOnYearGroups = getYearOnYearMonths();
   const quarterGroups = getQuarterGroups();
 
-  // Group months by year (in descending order: 2025, 2024, 2023)
+  // Group months by year (in descending order: 2025, 2024)
   const yearGroups = allMonths.reduce((acc, month) => {
     if (!acc[month.year]) acc[month.year] = [];
     acc[month.year].push(month);
@@ -179,9 +175,9 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
   // Sort years in descending order
   const sortedYears = Object.keys(yearGroups).map(Number).sort((a, b) => b - a);
 
-  // Group data by category
+  // Group data by first visit location (category)
   const groupedData = metricData.reduce((acc, item) => {
-    const category = item.category || 'Uncategorized';
+    const category = item.firstVisitLocation || 'Uncategorized';
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -213,14 +209,14 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
     
     if (shouldUseAverage) {
       const values = metricData.map(item => {
-        const value = parseFloat(item.total.replace(/[₹,]/g, '') || '0');
+        const value = parseFloat(item.grandTotal.replace(/[₹,]/g, '') || '0');
         return value;
       }).filter(value => value > 0); // Only include non-zero values for average
       
       return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
     } else {
       return metricData.reduce((sum, item) => {
-        const value = parseFloat(item.total.replace(/[₹,]/g, '') || '0');
+        const value = parseFloat(item.grandTotal.replace(/[₹,]/g, '') || '0');
         return sum + value;
       }, 0);
     }
@@ -250,14 +246,14 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
     
     if (shouldUseAverage) {
       const values = categoryData.map(item => {
-        const value = parseFloat(item.total.replace(/[₹,]/g, '') || 0);
+        const value = parseFloat(item.grandTotal.replace(/[₹,]/g, '') || 0);
         return value;
       }).filter(value => value > 0); // Only include non-zero values for average
       
       return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
     } else {
       return categoryData.reduce((sum, item) => {
-        const value = parseFloat(item.total.replace(/[₹,]/g, '') || 0);
+        const value = parseFloat(item.grandTotal.replace(/[₹,]/g, '') || 0);
         return sum + value;
       }, 0);
     }
@@ -344,8 +340,8 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
               )}
             </h3>
             <p className="text-slate-300 text-sm mt-1">
-              {viewMode === 'chronological' && 'Chronological breakdown by category and product'}
-              {viewMode === 'year-on-year' && 'Year-on-year comparison by month (May to Jan)'}
+              {viewMode === 'chronological' && 'Chronological breakdown by location and trainer'}
+              {viewMode === 'year-on-year' && 'Year-on-year comparison by month (Jun to Jan)'}
               {viewMode === 'quarter' && 'Quarterly performance analysis'}
               {viewMode === 'comparative' && 'Comparative analysis across periods'}
             </p>
@@ -361,7 +357,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       <th className="px-6 py-1 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                          Category / Product
+                          Location / Trainer
                         </div>
                       </th>
                       {sortedYears.map(year => (
@@ -398,7 +394,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       <th className="px-6 py-1 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
-                          Category / Product
+                          Location / Trainer
                         </div>
                       </th>
                       {yearOnYearGroups.map(group => (
@@ -437,7 +433,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       <th className="px-6 py-1 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                          Category / Product
+                          Location / Trainer
                         </div>
                       </th>
                       {quarterGroups.map(group => (
@@ -476,7 +472,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       <th className="px-6 py-1 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-indigo-400 rounded-full"></div>
-                          Category / Product
+                          Location / Trainer
                         </div>
                       </th>
                       <th className="px-4 py-1 text-center text-lg font-bold text-white border-r border-slate-400" colSpan={3}>
@@ -599,7 +595,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       </td>
                     </tr>
 
-                    {/* Product Rows (Collapsible) */}
+                    {/* Trainer Rows (Collapsible) */}
                     {expandedCategories.has(category) && categoryData.map((row, index) => (
                       <tr 
                         key={`${category}-${index}`} 
@@ -608,8 +604,8 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       >
                         <td className="px-6 py-1 text-sm border-r border-slate-200/50 pl-16">
                           <div className="flex flex-col border-l-4 border-blue-400/60 pl-4 rounded-r-lg bg-white/40 shadow-sm">
-                            <div className="text-sm font-semibold text-black">{row.product}</div>
-                            <div className="text-xs text-gray-600 bg-slate-100/60 px-2 rounded-full inline-block">{category}</div>
+                            <div className="text-sm font-semibold text-black">{row.trainerName}</div>
+                            <div className="text-xs text-gray-600 bg-slate-100/60 px-2 rounded-full inline-block">{row.isNew}</div>
                           </div>
                         </td>
                         {viewMode === 'chronological' ? (
@@ -686,7 +682,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                         <td className="px-6 py-1 text-center text-base">
                           <div className="bg-emerald-50/60 rounded-lg p-1">
                             <span className="text-black font-semibold">
-                              {formatValue(row.total, selectedMetric)}
+                              {formatValue(row.grandTotal, selectedMetric)}
                             </span>
                           </div>
                         </td>
@@ -760,14 +756,16 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
         </Card>
       )}
 
-      {/* Floating Note Taker */}
+      {/* Floating Note Taker - Collapsed by default */}
       {!isPinnedNoteTaker && (
-        <FloatingNoteTaker
-          storageKey={`notes-${selectedMetric}`}
-          title={`${selectedMetric} Notes`}
-          isPinned={false}
-          onPinToggle={setIsPinnedNoteTaker}
-        />
+        <div className="fixed bottom-4 right-4 z-50">
+          <FloatingNoteTaker
+            storageKey={`notes-${selectedMetric}`}
+            title={`${selectedMetric} Notes`}
+            isPinned={false}
+            onPinToggle={setIsPinnedNoteTaker}
+          />
+        </div>
       )}
 
       {/* Pinned Note Taker */}
