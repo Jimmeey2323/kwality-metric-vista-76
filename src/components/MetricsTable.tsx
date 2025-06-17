@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { MetricData, getUniqueMetrics } from '@/utils/csvParser';
 import { formatCurrency, formatPercentage, formatNumber } from '@/utils/formatters';
 import { Card } from '@/components/ui/card';
-import { ChevronDown, ChevronRight, TrendingUp, BarChart3 } from 'lucide-react';
+import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, BarChart3, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -57,6 +57,35 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
     }
   };
 
+  const GrowthIndicator: React.FC<{ current: string; previous: string; metricType: string }> = ({ current, previous, metricType }) => {
+    const currentValue = parseFloat(current?.replace(/[₹,]/g, '') || '0');
+    const previousValue = parseFloat(previous?.replace(/[₹,]/g, '') || '0');
+    
+    if (!current || !previous || currentValue === 0 || previousValue === 0) {
+      return null;
+    }
+    
+    const growth = ((currentValue - previousValue) / previousValue) * 100;
+    const isPositive = growth > 0;
+    const isNeutral = Math.abs(growth) < 0.1;
+
+    if (isNeutral) {
+      return (
+        <div className="flex items-center gap-1 text-gray-400 ml-1">
+          <Minus className="w-3 h-3" />
+          <span className="text-xs">0%</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`flex items-center gap-1 ml-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+        {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+        <span className="text-xs font-medium">{Math.abs(growth).toFixed(1)}%</span>
+      </div>
+    );
+  };
+
   const metricData = data.filter(item => item.metric === selectedMetric);
 
   // All 23 months in descending order (2025-May to 2023-Jul)
@@ -86,12 +115,15 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
     { key: '2023-jul' as keyof MetricData, label: 'Jul 23', quarter: 'Q3', year: 2023 }
   ];
 
-  // Group months by year for header display
+  // Group months by year (in descending order: 2025, 2024, 2023)
   const yearGroups = months.reduce((acc, month) => {
     if (!acc[month.year]) acc[month.year] = [];
     acc[month.year].push(month);
     return acc;
   }, {} as Record<number, typeof months>);
+
+  // Sort years in descending order
+  const sortedYears = Object.keys(yearGroups).map(Number).sort((a, b) => b - a);
 
   // Group data by category
   const groupedData = metricData.reduce((acc, item) => {
@@ -164,11 +196,11 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                       Category / Product
                     </div>
                   </th>
-                  {Object.entries(yearGroups).map(([year, yearMonths]) => (
+                  {sortedYears.map((year) => (
                     <th 
                       key={year} 
                       className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
-                      colSpan={yearMonths.length}
+                      colSpan={yearGroups[year].length}
                     >
                       <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
                         {year}
@@ -223,18 +255,31 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                           {category.toUpperCase()}
                         </div>
                       </td>
-                      {months.map(month => {
+                      {months.map((month, index) => {
                         const total = categoryData.reduce((sum, item) => {
                           const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
                           return sum + value;
                         }, 0);
+                        const previousMonth = index < months.length - 1 ? months[index + 1] : null;
+                        const previousTotal = previousMonth ? categoryData.reduce((sum, item) => {
+                          const value = parseFloat((item[previousMonth.key] as string).replace(/[₹,]/g, '')) || 0;
+                          return sum + value;
+                        }, 0) : 0;
+                        
                         return (
                           <td 
                             key={month.key} 
                             className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
                           >
-                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
                               {formatValue(total.toString(), selectedMetric)}
+                              {previousMonth && (
+                                <GrowthIndicator 
+                                  current={total.toString()} 
+                                  previous={previousTotal.toString()} 
+                                  metricType={selectedMetric} 
+                                />
+                              )}
                             </div>
                           </td>
                         );
@@ -260,25 +305,38 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                       >
                         <td className="px-6 py-4 text-sm border-r border-slate-200/50 pl-16">
                           <div className="flex flex-col border-l-4 border-blue-400/60 pl-4 py-1 rounded-r-lg bg-white/40 shadow-sm">
-                            <div className="text-base font-semibold text-slate-600">{row.product}</div>
+                            <div className="text-base font-semibold text-slate-500">{row.product}</div>
                             <div className="text-xs text-slate-400 bg-slate-100/60 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
                           </div>
                         </td>
-                        {months.map(month => (
-                          <td 
-                            key={month.key} 
-                            className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
-                          >
-                            <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200">
-                              <span className="text-slate-500 font-medium">
-                                {formatValue(row[month.key] as string, selectedMetric)}
-                              </span>
-                            </div>
-                          </td>
-                        ))}
+                        {months.map((month, monthIndex) => {
+                          const currentValue = row[month.key] as string;
+                          const previousMonth = monthIndex < months.length - 1 ? months[monthIndex + 1] : null;
+                          const previousValue = previousMonth ? row[previousMonth.key] as string : '';
+                          
+                          return (
+                            <td 
+                              key={month.key} 
+                              className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
+                            >
+                              <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
+                                <span className="text-slate-400 font-medium">
+                                  {formatValue(currentValue, selectedMetric)}
+                                </span>
+                                {previousMonth && (
+                                  <GrowthIndicator 
+                                    current={currentValue} 
+                                    previous={previousValue} 
+                                    metricType={selectedMetric} 
+                                  />
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
                         <td className="px-6 py-4 text-center text-base">
                           <div className="bg-emerald-50/60 rounded-lg p-2">
-                            <span className="text-slate-600 font-semibold">
+                            <span className="text-slate-500 font-semibold">
                               {formatValue(row.total, selectedMetric)}
                             </span>
                           </div>
