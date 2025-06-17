@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, BarChart3, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface MetricsTableProps {
   data: MetricData[];
@@ -14,7 +15,7 @@ interface MetricsTableProps {
 const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedMetric, setSelectedMetric] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'chronological' | 'year-on-year'>('chronological');
+  const [viewMode, setViewMode] = useState<'chronological' | 'year-on-year' | 'quarter' | 'comparative'>('chronological');
   
   const availableMetrics = getUniqueMetrics(data);
   
@@ -116,7 +117,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
     { key: '2023-jul' as keyof MetricData, label: 'Jul 23', quarter: 'Q3', year: 2023, month: 7 }
   ];
 
-  // Year-on-year view: group by month name, sort by year descending
+  // Year-on-year view: group by month name, sort by year descending, then sort months May-Jan
   const getYearOnYearMonths = () => {
     const monthGroups: { [monthName: string]: typeof allMonths } = {};
     
@@ -133,16 +134,35 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
       monthGroups[monthName].sort((a, b) => b.year - a.year);
     });
     
-    // Return months in chronological order (Jan to Dec)
-    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Return months in May-Jan order (May first, Jan last)
+    const monthOrder = ['May', 'Apr', 'Mar', 'Feb', 'Jan', 'Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul', 'Jun'];
     return monthOrder.map(monthName => ({
       monthName,
       columns: monthGroups[monthName] || []
     })).filter(group => group.columns.length > 0);
   };
 
-  const months = viewMode === 'chronological' ? allMonths : allMonths; // We'll handle year-on-year display differently
+  // Quarter view: group by quarters
+  const getQuarterGroups = () => {
+    const quarterGroups: { [key: string]: typeof allMonths } = {};
+    
+    allMonths.forEach(month => {
+      const quarterKey = `${month.year}-Q${month.quarter}`;
+      if (!quarterGroups[quarterKey]) {
+        quarterGroups[quarterKey] = [];
+      }
+      quarterGroups[quarterKey].push(month);
+    });
+    
+    return Object.entries(quarterGroups).map(([quarterKey, months]) => ({
+      quarterKey,
+      columns: months.sort((a, b) => b.month - a.month) // Sort months within quarter descending
+    })).sort((a, b) => b.quarterKey.localeCompare(a.quarterKey)); // Sort quarters descending
+  };
+
+  const months = viewMode === 'chronological' ? allMonths : allMonths;
   const yearOnYearGroups = getYearOnYearMonths();
+  const quarterGroups = getQuarterGroups();
 
   // Group months by year (in descending order: 2025, 2024, 2023)
   const yearGroups = allMonths.reduce((acc, month) => {
@@ -204,39 +224,57 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
           </div>
           
           <Tabs value={selectedMetric} onValueChange={setSelectedMetric}>
-            <TabsList className="grid bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1" style={{ gridTemplateColumns: `repeat(${availableMetrics.length}, 1fr)` }}>
-              {availableMetrics.map((metric) => (
-                <TabsTrigger 
-                  key={metric} 
-                  value={metric}
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-white/10 transition-all duration-300 rounded-lg py-3 px-4 text-white font-semibold"
-                >
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    <span className="text-sm">{metric}</span>
-                  </div>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <ScrollArea className="w-full">
+              <TabsList className="flex bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1 min-w-max">
+                {availableMetrics.map((metric) => (
+                  <TabsTrigger 
+                    key={metric} 
+                    value={metric}
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-white/10 transition-all duration-300 rounded-lg py-3 px-4 text-white font-semibold whitespace-nowrap flex-shrink-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      <span className="text-sm">{metric}</span>
+                    </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </Tabs>
 
           {/* View Mode Toggle */}
           <div className="mt-4">
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'chronological' | 'year-on-year')}>
-              <TabsList className="grid grid-cols-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1">
-                <TabsTrigger 
-                  value="chronological"
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-teal-600 data-[state=active]:text-white text-white font-semibold"
-                >
-                  Chronological View
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="year-on-year"
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white text-white font-semibold"
-                >
-                  Year-on-Year View
-                </TabsTrigger>
-              </TabsList>
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'chronological' | 'year-on-year' | 'quarter' | 'comparative')}>
+              <ScrollArea className="w-full">
+                <TabsList className="flex bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-1 min-w-max">
+                  <TabsTrigger 
+                    value="chronological"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-teal-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0"
+                  >
+                    Chronological View
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="year-on-year"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0"
+                  >
+                    Year-on-Year View
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="quarter"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0"
+                  >
+                    Quarter View
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="comparative"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-600 data-[state=active]:text-white text-white font-semibold whitespace-nowrap flex-shrink-0"
+                  >
+                    Comparative Analysis
+                  </TabsTrigger>
+                </TabsList>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </Tabs>
           </div>
         </div>
@@ -248,7 +286,10 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
           <div className="p-6 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 border-b border-slate-500">
             <h3 className="text-xl font-bold text-white tracking-wide">{selectedMetric}</h3>
             <p className="text-slate-300 text-sm mt-1">
-              {viewMode === 'chronological' ? 'Chronological breakdown by category and product' : 'Year-on-year comparison by month'}
+              {viewMode === 'chronological' && 'Chronological breakdown by category and product'}
+              {viewMode === 'year-on-year' && 'Year-on-year comparison by month (May to Jan)'}
+              {viewMode === 'quarter' && 'Quarterly performance analysis'}
+              {viewMode === 'comparative' && 'Comparative analysis across periods'}
             </p>
           </div>
           
@@ -299,7 +340,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                       <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
                     </tr>
                   </>
-                ) : (
+                ) : viewMode === 'year-on-year' ? (
                   <>
                     {/* Year-on-Year Headers */}
                     <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
@@ -345,6 +386,95 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                       <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
                     </tr>
                   </>
+                ) : viewMode === 'quarter' ? (
+                  <>
+                    {/* Quarter Headers */}
+                    <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
+                      <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                          Category / Product
+                        </div>
+                      </th>
+                      {quarterGroups.map((group) => (
+                        <th 
+                          key={group.quarterKey} 
+                          className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400"
+                          colSpan={group.columns.length}
+                        >
+                          <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                            {group.quarterKey}
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-6 py-4 text-center text-lg font-bold text-white">
+                        <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
+                          Total
+                        </div>
+                      </th>
+                    </tr>
+                    
+                    {/* Month Sub-headers */}
+                    <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
+                      <th className="px-6 py-3 border-r border-slate-300"></th>
+                      {quarterGroups.map((group) => 
+                        group.columns.map(month => (
+                          <th 
+                            key={month.key} 
+                            className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
+                          >
+                            <div className="bg-white/20 rounded-lg py-1 px-2">
+                              {month.label}
+                            </div>
+                          </th>
+                        ))
+                      )}
+                      <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    {/* Comparative Analysis Headers - showing best and worst performers */}
+                    <tr className="bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600">
+                      <th className="px-6 py-4 text-left text-lg font-bold text-white border-r border-slate-400 min-w-[300px]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-indigo-400 rounded-full"></div>
+                          Category / Product
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400" colSpan={3}>
+                        <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                          Best 3 Months
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-center text-lg font-bold text-white border-r border-slate-400" colSpan={3}>
+                        <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                          Recent 3 Months
+                        </div>
+                      </th>
+                      <th className="px-6 py-4 text-center text-lg font-bold text-white">
+                        <div className="bg-emerald-500/80 rounded-lg p-2 backdrop-blur-sm">
+                          Total
+                        </div>
+                      </th>
+                    </tr>
+                    
+                    {/* Sub-headers for comparative */}
+                    <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
+                      <th className="px-6 py-3 border-r border-slate-300"></th>
+                      {[...months.slice(0, 3), ...months.slice(0, 3)].map((month, index) => (
+                        <th 
+                          key={`${month.key}-${index}`} 
+                          className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]"
+                        >
+                          <div className="bg-white/20 rounded-lg py-1 px-2">
+                            {month.label}
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-6 py-3 text-center text-sm font-bold text-white"></th>
+                    </tr>
+                  </>
                 )}
               </thead>
               <tbody>
@@ -355,12 +485,12 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                       className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 cursor-pointer hover:from-slate-600 hover:via-slate-500 hover:to-slate-600 transition-all duration-300"
                       onClick={() => toggleCategory(category)}
                     >
-                      <td className="px-6 py-4 text-lg font-bold text-white border-r border-slate-400">
+                      <td className="px-6 py-4 text-lg font-bold text-slate-100 border-r border-slate-400">
                         <div className="flex items-center gap-3">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 hover:bg-white/20 rounded-full text-white"
+                            className="h-8 w-8 p-0 hover:bg-white/20 rounded-full text-slate-100"
                           >
                             {expandedCategories.has(category) ? (
                               <ChevronDown className="h-4 w-4" />
@@ -388,7 +518,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                             return (
                               <td 
                                 key={month.key} 
-                                className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
+                                className="px-3 py-4 text-center text-sm font-bold text-slate-100 border-r border-slate-400"
                               >
                                 <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
                                   {formatValue(total.toString(), selectedMetric)}
@@ -404,7 +534,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                             );
                           })}
                         </>
-                      ) : (
+                      ) : viewMode === 'year-on-year' ? (
                         <>
                           {yearOnYearGroups.map((group) => 
                             group.columns.map((month, index) => {
@@ -413,7 +543,6 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                                 return sum + value;
                               }, 0);
                               
-                              // Find same month from previous year for growth calculation
                               const previousYearMonth = group.columns.find(m => m.year === month.year - 1);
                               const previousTotal = previousYearMonth ? categoryData.reduce((sum, item) => {
                                 const value = parseFloat((item[previousYearMonth.key] as string).replace(/[₹,]/g, '')) || 0;
@@ -423,7 +552,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                               return (
                                 <td 
                                   key={month.key} 
-                                  className="px-3 py-4 text-center text-sm font-bold text-white border-r border-slate-400"
+                                  className="px-3 py-4 text-center text-sm font-bold text-slate-100 border-r border-slate-400"
                                 >
                                   <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
                                     {formatValue(total.toString(), selectedMetric)}
@@ -440,8 +569,50 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                             })
                           )}
                         </>
+                      ) : viewMode === 'quarter' ? (
+                        <>
+                          {quarterGroups.map((group) => 
+                            group.columns.map((month) => {
+                              const total = categoryData.reduce((sum, item) => {
+                                const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
+                                return sum + value;
+                              }, 0);
+                              
+                              return (
+                                <td 
+                                  key={month.key} 
+                                  className="px-3 py-4 text-center text-sm font-bold text-slate-100 border-r border-slate-400"
+                                >
+                                  <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
+                                    {formatValue(total.toString(), selectedMetric)}
+                                  </div>
+                                </td>
+                              );
+                            })
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {[...months.slice(0, 3), ...months.slice(0, 3)].map((month, index) => {
+                            const total = categoryData.reduce((sum, item) => {
+                              const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
+                              return sum + value;
+                            }, 0);
+                            
+                            return (
+                              <td 
+                                key={`${month.key}-${index}`} 
+                                className="px-3 py-4 text-center text-sm font-bold text-slate-100 border-r border-slate-400"
+                              >
+                                <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm flex flex-col items-center">
+                                  {formatValue(total.toString(), selectedMetric)}
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </>
                       )}
-                      <td className="px-6 py-4 text-center text-base font-bold text-white">
+                      <td className="px-6 py-4 text-center text-base font-bold text-slate-100">
                         <div className="bg-white/30 rounded-lg p-2 backdrop-blur-sm">
                           {(() => {
                             const total = categoryData.reduce((sum, item) => {
@@ -462,8 +633,8 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                       >
                         <td className="px-6 py-4 text-sm border-r border-slate-200/50 pl-16">
                           <div className="flex flex-col border-l-4 border-blue-400/60 pl-4 py-1 rounded-r-lg bg-white/40 shadow-sm">
-                            <div className="text-base font-semibold text-slate-500">{row.product}</div>
-                            <div className="text-xs text-slate-400 bg-slate-100/60 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
+                            <div className="text-base font-semibold text-slate-700">{row.product}</div>
+                            <div className="text-xs text-slate-500 bg-slate-100/60 px-2 py-1 rounded-full inline-block mt-1">{category}</div>
                           </div>
                         </td>
                         {viewMode === 'chronological' ? (
@@ -479,7 +650,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                                   className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
                                 >
                                   <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
-                                    <span className="text-slate-400 font-medium">
+                                    <span className="text-slate-600 font-medium">
                                       {formatValue(currentValue, selectedMetric)}
                                     </span>
                                     {previousMonth && (
@@ -494,7 +665,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                               );
                             })}
                           </>
-                        ) : (
+                        ) : viewMode === 'year-on-year' ? (
                           <>
                             {yearOnYearGroups.map((group) => 
                               group.columns.map((month) => {
@@ -508,7 +679,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                                     className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
                                   >
                                     <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
-                                      <span className="text-slate-400 font-medium">
+                                      <span className="text-slate-600 font-medium">
                                         {formatValue(currentValue, selectedMetric)}
                                       </span>
                                       {previousYearMonth && (
@@ -524,10 +695,50 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                               })
                             )}
                           </>
+                        ) : viewMode === 'quarter' ? (
+                          <>
+                            {quarterGroups.map((group) => 
+                              group.columns.map((month) => {
+                                const currentValue = row[month.key] as string;
+                                
+                                return (
+                                  <td 
+                                    key={month.key} 
+                                    className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
+                                  >
+                                    <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
+                                      <span className="text-slate-600 font-medium">
+                                        {formatValue(currentValue, selectedMetric)}
+                                      </span>
+                                    </div>
+                                  </td>
+                                );
+                              })
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {[...months.slice(0, 3), ...months.slice(0, 3)].map((month, index) => {
+                              const currentValue = row[month.key] as string;
+                              
+                              return (
+                                <td 
+                                  key={`${month.key}-${index}`} 
+                                  className="px-3 py-4 text-center text-sm border-r border-slate-200/50"
+                                >
+                                  <div className="p-2 rounded-lg hover:bg-white/60 transition-all duration-200 flex flex-col items-center">
+                                    <span className="text-slate-600 font-medium">
+                                      {formatValue(currentValue, selectedMetric)}
+                                    </span>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </>
                         )}
                         <td className="px-6 py-4 text-center text-base">
                           <div className="bg-emerald-50/60 rounded-lg p-2">
-                            <span className="text-slate-500 font-semibold">
+                            <span className="text-slate-600 font-semibold">
                               {formatValue(row.total, selectedMetric)}
                             </span>
                           </div>
@@ -558,7 +769,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                         </td>
                       ))}
                     </>
-                  ) : (
+                  ) : viewMode === 'year-on-year' ? (
                     <>
                       {yearOnYearGroups.map((group) => 
                         group.columns.map((month) => (
@@ -572,6 +783,34 @@ const MetricsTable: React.FC<MetricsTableProps> = ({ data }) => {
                           </td>
                         ))
                       )}
+                    </>
+                  ) : viewMode === 'quarter' ? (
+                    <>
+                      {quarterGroups.map((group) => 
+                        group.columns.map((month) => (
+                          <td 
+                            key={month.key}
+                            className="px-3 py-4 text-center text-sm font-bold text-white border-r border-emerald-400"
+                          >
+                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                              {formatValue(calculateMonthTotal(month.key).toString(), selectedMetric)}
+                            </div>
+                          </td>
+                        ))
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {[...months.slice(0, 3), ...months.slice(0, 3)].map((month, index) => (
+                        <td 
+                          key={`${month.key}-${index}`}
+                          className="px-3 py-4 text-center text-sm font-bold text-white border-r border-emerald-400"
+                        >
+                          <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+                            {formatValue(calculateMonthTotal(month.key).toString(), selectedMetric)}
+                          </div>
+                        </td>
+                      ))}
                     </>
                   )}
                   <td className="px-6 py-4 text-center text-base font-bold text-white">
