@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MetricData, getUniqueMetrics } from '@/utils/csvParser';
 import { formatCurrency, formatPercentage, formatNumber } from '@/utils/formatters';
@@ -7,6 +6,7 @@ import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, BarChart3, Minus }
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import FloatingNoteTaker from '@/components/FloatingNoteTaker';
 
 interface MetricsTableProps {
   data: MetricData[];
@@ -18,8 +18,12 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedMetric, setSelectedMetric] = useState<string>('');
   const [viewMode, setViewMode] = useState<'chronological' | 'year-on-year' | 'quarter' | 'comparative'>('chronological');
+  const [isPinnedNoteTaker, setIsPinnedNoteTaker] = useState<boolean>(false);
   
   const availableMetrics = getUniqueMetrics(data);
+
+  // Metrics that should show averages instead of sums in grouped rows
+  const averageMetrics = ['AUV', 'ATV', 'ASV', 'UPT'];
 
   // Set default metric if not selected
   React.useEffect(() => {
@@ -185,20 +189,78 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
     return acc;
   }, {} as Record<string, MetricData[]>);
 
-  // Calculate totals for each month
+  // Modified calculation functions to handle averages for specific metrics
   const calculateMonthTotal = (monthKey: string) => {
-    return metricData.reduce((sum, item) => {
-      const value = parseFloat((item[monthKey as keyof MetricData] as string)?.replace(/[₹,]/g, '') || '0');
-      return sum + value;
-    }, 0);
+    const shouldUseAverage = averageMetrics.includes(selectedMetric);
+    
+    if (shouldUseAverage) {
+      const values = metricData.map(item => {
+        const value = parseFloat((item[monthKey as keyof MetricData] as string)?.replace(/[₹,]/g, '') || '0');
+        return value;
+      }).filter(value => value > 0); // Only include non-zero values for average
+      
+      return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    } else {
+      return metricData.reduce((sum, item) => {
+        const value = parseFloat((item[monthKey as keyof MetricData] as string)?.replace(/[₹,]/g, '') || '0');
+        return sum + value;
+      }, 0);
+    }
   };
 
-  // Calculate grand total
   const calculateGrandTotal = () => {
-    return metricData.reduce((sum, item) => {
-      const value = parseFloat(item.total.replace(/[₹,]/g, '') || '0');
-      return sum + value;
-    }, 0);
+    const shouldUseAverage = averageMetrics.includes(selectedMetric);
+    
+    if (shouldUseAverage) {
+      const values = metricData.map(item => {
+        const value = parseFloat(item.total.replace(/[₹,]/g, '') || '0');
+        return value;
+      }).filter(value => value > 0); // Only include non-zero values for average
+      
+      return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    } else {
+      return metricData.reduce((sum, item) => {
+        const value = parseFloat(item.total.replace(/[₹,]/g, '') || '0');
+        return sum + value;
+      }, 0);
+    }
+  };
+
+  // Modified category calculation for averages
+  const calculateCategoryValue = (categoryData: MetricData[], monthKey: string) => {
+    const shouldUseAverage = averageMetrics.includes(selectedMetric);
+    
+    if (shouldUseAverage) {
+      const values = categoryData.map(item => {
+        const value = parseFloat((item[monthKey as keyof MetricData] as string).replace(/[₹,]/g, '') || 0);
+        return value;
+      }).filter(value => value > 0); // Only include non-zero values for average
+      
+      return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    } else {
+      return categoryData.reduce((sum, item) => {
+        const value = parseFloat((item[monthKey as keyof MetricData] as string).replace(/[₹,]/g, '') || 0);
+        return sum + value;
+      }, 0);
+    }
+  };
+
+  const calculateCategoryTotal = (categoryData: MetricData[]) => {
+    const shouldUseAverage = averageMetrics.includes(selectedMetric);
+    
+    if (shouldUseAverage) {
+      const values = categoryData.map(item => {
+        const value = parseFloat(item.total.replace(/[₹,]/g, '') || 0);
+        return value;
+      }).filter(value => value > 0); // Only include non-zero values for average
+      
+      return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    } else {
+      return categoryData.reduce((sum, item) => {
+        const value = parseFloat(item.total.replace(/[₹,]/g, '') || 0);
+        return sum + value;
+      }, 0);
+    }
   };
 
   if (availableMetrics.length === 0) {
@@ -273,7 +335,14 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
       {selectedMetric && (
         <Card className="overflow-hidden backdrop-blur-md bg-white/90 border border-slate-200/50 shadow-2xl rounded-2xl">
           <div className="p-6 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 border-b border-slate-500">
-            <h3 className="text-xl font-bold text-white tracking-wide">{selectedMetric}</h3>
+            <h3 className="text-xl font-bold text-white tracking-wide">
+              {selectedMetric}
+              {averageMetrics.includes(selectedMetric) && (
+                <span className="ml-2 text-sm bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded-full">
+                  Showing Averages
+                </span>
+              )}
+            </h3>
             <p className="text-slate-300 text-sm mt-1">
               {viewMode === 'chronological' && 'Chronological breakdown by category and product'}
               {viewMode === 'year-on-year' && 'Year-on-year comparison by month (May to Jan)'}
@@ -463,15 +532,9 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       {viewMode === 'chronological' ? (
                         <>
                           {months.map((month, index) => {
-                            const total = categoryData.reduce((sum, item) => {
-                              const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
-                              return sum + value;
-                            }, 0);
+                            const total = calculateCategoryValue(categoryData, month.key);
                             const previousMonth = index < months.length - 1 ? months[index + 1] : null;
-                            const previousTotal = previousMonth ? categoryData.reduce((sum, item) => {
-                              const value = parseFloat((item[previousMonth.key] as string).replace(/[₹,]/g, '')) || 0;
-                              return sum + value;
-                            }, 0) : 0;
+                            const previousTotal = previousMonth ? calculateCategoryValue(categoryData, previousMonth.key) : 0;
                             return (
                               <td key={month.key} className="px-3 py-1 text-center text-sm font-bold text-white border-r border-slate-400">
                                 <div className="bg-white/20 rounded-lg p-1 backdrop-blur-sm flex flex-col items-center">
@@ -486,15 +549,9 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                         <>
                           {yearOnYearGroups.map(group => 
                             group.columns.map((month, index) => {
-                              const total = categoryData.reduce((sum, item) => {
-                                const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
-                                return sum + value;
-                              }, 0);
+                              const total = calculateCategoryValue(categoryData, month.key);
                               const previousYearMonth = group.columns.find(m => m.year === month.year - 1);
-                              const previousTotal = previousYearMonth ? categoryData.reduce((sum, item) => {
-                                const value = parseFloat((item[previousYearMonth.key] as string).replace(/[₹,]/g, '')) || 0;
-                                return sum + value;
-                              }, 0) : 0;
+                              const previousTotal = previousYearMonth ? calculateCategoryValue(categoryData, previousYearMonth.key) : 0;
                               return (
                                 <td key={month.key} className="px-3 py-1 text-center text-sm font-bold text-white border-r border-slate-400">
                                   <div className="bg-white/20 rounded-lg p-1 backdrop-blur-sm flex flex-col items-center">
@@ -510,10 +567,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                         <>
                           {quarterGroups.map(group => 
                             group.columns.map(month => {
-                              const total = categoryData.reduce((sum, item) => {
-                                const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
-                                return sum + value;
-                              }, 0);
+                              const total = calculateCategoryValue(categoryData, month.key);
                               return (
                                 <td key={month.key} className="px-3 py-1 text-center text-sm font-bold text-white border-r border-slate-400">
                                   <div className="bg-white/20 rounded-lg p-1 backdrop-blur-sm flex flex-col items-center">
@@ -527,10 +581,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       ) : (
                         <>
                           {[...months.slice(0, 3), ...months.slice(0, 3)].map((month, index) => {
-                            const total = categoryData.reduce((sum, item) => {
-                              const value = parseFloat((item[month.key] as string).replace(/[₹,]/g, '')) || 0;
-                              return sum + value;
-                            }, 0);
+                            const total = calculateCategoryValue(categoryData, month.key);
                             return (
                               <td key={`${month.key}-${index}`} className="px-3 py-1 text-center text-sm font-bold text-white border-r border-slate-400">
                                 <div className="bg-white/20 rounded-lg p-1 backdrop-blur-sm flex flex-col items-center">
@@ -543,13 +594,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                       )}
                       <td className="px-6 py-1 text-center text-base font-bold text-white">
                         <div className="bg-white/30 rounded-lg p-1 backdrop-blur-sm">
-                          {(() => {
-                            const total = categoryData.reduce((sum, item) => {
-                              const value = parseFloat(item.total.replace(/[₹,]/g, '')) || 0;
-                              return sum + value;
-                            }, 0);
-                            return formatValue(total.toString(), selectedMetric);
-                          })()}
+                          {formatValue(calculateCategoryTotal(categoryData).toString(), selectedMetric)}
                         </div>
                       </td>
                     </tr>
@@ -655,7 +700,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-6 py-1 text-lg font-bold text-white border-r border-emerald-400">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-                      TOTALS
+                      {averageMetrics.includes(selectedMetric) ? 'AVERAGES' : 'TOTALS'}
                     </div>
                   </td>
                   {viewMode === 'chronological' ? (
@@ -713,6 +758,26 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Floating Note Taker */}
+      {!isPinnedNoteTaker && (
+        <FloatingNoteTaker
+          storageKey={`notes-${selectedMetric}`}
+          title={`${selectedMetric} Notes`}
+          isPinned={false}
+          onPinToggle={setIsPinnedNoteTaker}
+        />
+      )}
+
+      {/* Pinned Note Taker */}
+      {isPinnedNoteTaker && selectedMetric && (
+        <FloatingNoteTaker
+          storageKey={`notes-${selectedMetric}`}
+          title={`${selectedMetric} Notes`}
+          isPinned={true}
+          onPinToggle={setIsPinnedNoteTaker}
+        />
       )}
     </div>
   );
