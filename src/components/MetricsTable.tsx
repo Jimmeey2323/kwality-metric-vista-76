@@ -396,7 +396,7 @@ const MetricsTable: React.FC<MetricsTableProps> = ({
                     </tr>
                     
                     {/* Month Headers */}
-                    <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500">
+                    <tr className="bg-gradient-to-r from-slate-500 via-slate-400 to-slate-500 bg-zinc-900">
                       <th className="px-6 py-3 border-r border-slate-300"></th>
                       {months.map(month => <th key={month.key} className="px-3 py-3 text-center text-sm font-bold text-white border-r border-slate-300 min-w-[120px]">
                           <div className="bg-white/20 rounded-lg py-1 px-2">
