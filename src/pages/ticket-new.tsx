@@ -289,6 +289,34 @@ export default function NewTicket() {
       if (data.trainer) dynamicFieldData.trainer = data.trainer;
       if (data.className) dynamicFieldData.className = data.className;
 
+      // Get category and subcategory names for AI routing
+      const category = categories.find(c => c.id === data.categoryId);
+      const subcategory = subcategories.find(s => s.id === data.subcategoryId);
+
+      // AI-powered routing analysis
+      let aiRouting = null;
+      try {
+        const { data: routingData, error: routingError } = await supabase.functions.invoke('analyze-ticket', {
+          body: {
+            title: data.title,
+            description: data.description,
+            category: category?.name,
+            subcategory: subcategory?.name,
+            studioId: data.studioId,
+          }
+        });
+        if (!routingError && routingData) {
+          aiRouting = routingData;
+          // Update priority if AI suggests higher priority
+          const priorityOrder = ['low', 'medium', 'high', 'critical'];
+          if (aiRouting.priority && priorityOrder.indexOf(aiRouting.priority) > priorityOrder.indexOf(data.priority)) {
+            data.priority = aiRouting.priority;
+          }
+        }
+      } catch (aiError) {
+        console.warn('AI routing failed, using manual assignment:', aiError);
+      }
+
       const ticketData = {
         ticketNumber,
         studioId: data.studioId,
@@ -304,9 +332,19 @@ export default function NewTicket() {
         customerStatus: data.customerStatus || null,
         clientMood: data.clientMood || null,
         incidentDateTime: data.incidentDateTime ? new Date(data.incidentDateTime).toISOString() : null,
-        dynamicFieldData,
+        dynamicFieldData: {
+          ...dynamicFieldData,
+          aiRouting: aiRouting ? {
+            department: aiRouting.department,
+            suggestedTags: aiRouting.suggestedTags,
+            needsEscalation: aiRouting.needsEscalation,
+            routingConfidence: aiRouting.routingConfidence,
+            analysis: aiRouting.analysis,
+          } : null,
+        },
         source: data.source || 'in-person',
-        status: 'new',
+        status: aiRouting?.needsEscalation ? 'escalated' : 'new',
+        tags: aiRouting?.suggestedTags || [],
       };
 
       const { data: ticket, error } = await supabase
@@ -317,9 +355,31 @@ export default function NewTicket() {
 
       if (error) throw error;
 
+      // Send notification if ticket needs escalation
+      if (aiRouting?.needsEscalation) {
+        try {
+          await supabase.functions.invoke('send-ticket-notification', {
+            body: {
+              type: 'escalation',
+              ticketNumber,
+              ticketTitle: data.title,
+              recipientEmail: 'jimmeey@physique57india.com',
+              recipientName: 'Manager',
+              priority: data.priority,
+              category: category?.name,
+              escalationReason: aiRouting.escalationReason || 'High priority ticket requiring immediate attention',
+            }
+          });
+        } catch (notifError) {
+          console.warn('Notification failed:', notifError);
+        }
+      }
+
       toast({
         title: "Ticket created successfully",
-        description: `Ticket ${ticketNumber} has been submitted.`,
+        description: aiRouting 
+          ? `Ticket ${ticketNumber} submitted. AI routed to ${aiRouting.department} department.`
+          : `Ticket ${ticketNumber} has been submitted.`,
       });
 
       queryClient.invalidateQueries({ queryKey: ['tickets'] });

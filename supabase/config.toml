@@ -2,3 +2,9 @@ project_id = "brumbzbtvqkslzhlpsxh"
 
 [functions.analyze-sentiment]
 verify_jwt = false
+
+[functions.analyze-ticket]
+verify_jwt = false
+
+[functions.send-ticket-notification]
+verify_jwt = false
