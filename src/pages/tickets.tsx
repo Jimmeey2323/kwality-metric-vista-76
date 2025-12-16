@@ -958,8 +958,7 @@ export default function Tickets() {
             </div>
           )}
         </>
-      )
-        ) : (
+      ) : (
           <EmptyState
             title="No tickets found"
             description={
